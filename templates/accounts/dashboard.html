@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}
+Dashboard
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+
+<div class="col-md-6">
+
+<div class="card shadow text-center">
+
+<div class="card-body">
+
+<h3 class="mb-4">User Dashboard</h3>
+
+<!-- Avatar -->
+
+{% if profile.avatar %}
+
+<img src="{{ profile.avatar.url }}"
+     width="120"
+     height="120"
+     class="rounded-circle mb-3">
+
+{% else %}
+
+<img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+     width="120"
+     height="120"
+     class="rounded-circle mb-3">
+
+{% endif %}
+
+<!-- Username -->
+
+<h4>{{ user.username }}</h4>
+
+<!-- Email -->
+
+<p class="text-muted">{{ user.email }}</p>
+
+<!-- Join Date -->
+
+<p class="text-muted">
+
+Joined: {{ user.date_joined|date:"Y-m-d" }}
+
+</p>
+
+<!-- Edit Profile Button -->
+
+<a href="/accounts/profile/edit/" class="btn btn-primary">
+
+Edit Profile
+
+</a>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<hr class="my-5">
+
+<!-- Future modules placeholder -->
+
+<div class="row">
+
+<div class="col-md-6">
+
+<div class="card shadow">
+
+<div class="card-body">
+
+<h5>Recent Projects</h5>
+
+<p class="text-muted">
+
+No projects yet.
+
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col-md-6">
+
+<div class="card shadow">
+
+<div class="card-body">
+
+<h5>Recent Tasks</h5>
+
+<p class="text-muted">
+
+No tasks yet.
+
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}
