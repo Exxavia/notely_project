@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Your Dashboard</h2>
+        <a href="{% url 'create_project' %}" class="btn btn-primary">
+            Create Project
+        </a>
+    </div>
+
+    <!-- 🔍 AJAX SEARCH -->
+    <div class="mb-4">
+        <div class="input-group">
+            <input type="text"
+                   id="search-input"
+                   class="form-control"
+                   placeholder="Search projects..."
+                   value="{{ query }}">
+        </div>
+    </div>
+
+    <!-- 🔥 Quick Access -->
+    <div class="mb-4">
+        <h4>🔥 Quick Access</h4>
+
+        <ul id="quick-list" class="list-group">
+
+            {% for task in quick_tasks %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+
+                    <a href="{% url 'task_detail' task.id %}" class="text-decoration-none">
+                        {{ task.title }}
+                    </a>
+
+                    <div class="d-flex align-items-center gap-2">
+
+                        <!-- STATUS -->
+                        <span class="badge
+                            {% if task.status == 'todo' %}bg-secondary
+                            {% elif task.status == 'doing' %}bg-warning text-dark
+                            {% elif task.status == 'done' %}bg-success
+                            {% endif %}
+                        ">
+                            {{ task.status|title }}
+                        </span>
+
+                        <!-- ⭐ QUICK TOGGLE -->
+                        <button class="btn btn-sm btn-outline-primary quick-btn"
+                                data-id="{{ task.id }}">
+                            ★
+                        </button>
+
+                    </div>
+
+                </li>
+
+            {% empty %}
+                <li class="list-group-item text-muted">
+                    No quick access tasks
+                </li>
+            {% endfor %}
+
+        </ul>
+    </div>
+
+    <!-- 📌 Pinned Projects -->
+    <div class="mb-4">
+        <h4>📌 Pinned Projects</h4>
+
+        <ul id="pinned-list" class="list-group">
+
+            {% for project in pinned_projects %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+
+                    <a href="{% url 'project_detail' project.id %}" class="text-decoration-none">
+                        {{ project.title }}
+                    </a>
+
+                    <button class="btn btn-sm btn-outline-secondary pin-btn"
+                            data-id="{{ project.id }}">
+                        Unpin
+                    </button>
+
+                </li>
+
+            {% empty %}
+                <li class="list-group-item text-muted">
+                    No pinned projects
+                </li>
+            {% endfor %}
+
+        </ul>
+    </div>
+
+    <!-- 📁 All Projects -->
+    <div>
+        <h4>📁 All Projects</h4>
+
+        <ul id="project-list" class="list-group">
+
+            {% for project in projects %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+
+                    <a href="{% url 'project_detail' project.id %}" class="text-decoration-none">
+                        {{ project.title }}
+                    </a>
+
+                    <button class="btn btn-sm btn-outline-primary pin-btn"
+                            data-id="{{ project.id }}">
+                        {% if project.is_pinned %}
+                            Pinned
+                        {% else %}
+                            Pin
+                        {% endif %}
+                    </button>
+
+                </li>
+
+            {% empty %}
+                <li class="list-group-item text-muted">
+                    No projects yet
+                </li>
+            {% endfor %}
+
+        </ul>
+    </div>
+
+</div>
+
+
+<!-- ================= AJAX SCRIPT ================= -->
+<script>
+
+// ---------------- CSRF ----------------
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+
+// ---------------- SEARCH AJAX ----------------
+document.getElementById("search-input").addEventListener("input", function() {
+
+    const query = this.value;
+
+    fetch(`/search/?q=${query}`)
+    .then(response => response.json())
+    .then(data => {
+
+        const list = document.getElementById("project-list");
+        list.innerHTML = "";
+
+        if (data.projects.length === 0) {
+            list.innerHTML = `
+                <li class="list-group-item text-muted">
+                    No projects found
+                </li>
+            `;
+            return;
+        }
+
+        data.projects.forEach(p => {
+
+            const li = document.createElement("li");
+
+            li.className = "list-group-item d-flex justify-content-between align-items-center";
+
+            li.innerHTML = `
+                <a href="/project/${p.id}/">${p.title}</a>
+                <button class="btn btn-sm btn-outline-primary pin-btn" data-id="${p.id}">
+                    Pin
+                </button>
+            `;
+
+            list.appendChild(li);
+
+        });
+
+    });
+
+});
+
+
+// ---------------- PIN AJAX ----------------
+document.addEventListener("click", function(e) {
+
+    if (e.target.classList.contains("pin-btn")) {
+
+        const btn = e.target;
+        const projectId = btn.dataset.id;
+
+        fetch(`/project/${projectId}/pin/`, {
+            method: "POST",
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+
+            if (data.pinned) {
+                btn.innerText = "Pinned";
+                btn.classList.remove("btn-outline-primary");
+                btn.classList.add("btn-outline-secondary");
+            } else {
+                btn.innerText = "Pin";
+                btn.classList.remove("btn-outline-secondary");
+                btn.classList.add("btn-outline-primary");
+            }
+
+        });
+
+    }
+
+});
+
+
+// ---------------- QUICK ACCESS AJAX ----------------
+document.addEventListener("click", function(e) {
+
+    if (e.target.classList.contains("quick-btn")) {
+
+        const btn = e.target;
+        const taskId = btn.dataset.id;
+
+        fetch(`/task/${taskId}/quick/`, {
+            method: "POST",
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+
+            if (!data.quick) {
+                // 🔥 remove from list instantly
+                btn.closest("li").remove();
+            }
+
+        });
+
+    }
+
+});
+
+</script>
+
+{% endblock %}

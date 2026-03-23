@@ -6,112 +6,207 @@ Dashboard
 
 {% block content %}
 
-<div class="row justify-content-center">
+<div class="container mt-4">
 
-<div class="col-md-6">
+    <!-- User Info -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow text-center">
+                <div class="card-body">
+                    <h3 class="mb-4">User Dashboard</h3>
 
-<div class="card shadow text-center">
+                    {% if profile.avatar %}
+                        <img src="{{ profile.avatar.url }}"
+                             width="120"
+                             height="120"
+                             class="rounded-circle mb-3">
+                    {% else %}
+                        <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                             width="120"
+                             height="120"
+                             class="rounded-circle mb-3">
+                    {% endif %}
 
-<div class="card-body">
+                    <h4>{{ user.username }}</h4>
+                    <p class="text-muted mb-1">{{ user.email }}</p>
+                    <p class="text-muted">Joined: {{ user.date_joined|date:"Y-m-d" }}</p>
 
-<h3 class="mb-4">User Dashboard</h3>
+                    <a href="/accounts/profile/edit/" class="btn btn-primary">
+                        Edit Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- Avatar -->
+    <!-- Summary Cards -->
+    <div class="row mb-4 g-3">
 
-{% if profile.avatar %}
+        <div class="col-md-4">
+            <div class="card shadow text-center h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Projects</h6>
+                    <h2>{{ stats.project_count }}</h2>
+                </div>
+            </div>
+        </div>
 
-<img src="{{ profile.avatar.url }}"
-     width="120"
-     height="120"
-     class="rounded-circle mb-3">
+        <div class="col-md-4">
+            <div class="card shadow text-center h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Tasks</h6>
+                    <h2>{{ stats.task_count }}</h2>
+                </div>
+            </div>
+        </div>
 
-{% else %}
+        <div class="col-md-4">
+            <div class="card shadow text-center h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Overdue</h6>
+                    <h2 class="text-danger">{{ stats.overdue_count }}</h2>
+                </div>
+            </div>
+        </div>
 
-<img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-     width="120"
-     height="120"
-     class="rounded-circle mb-3">
+    </div>
 
-{% endif %}
+    <!-- Chart + Status Cards -->
+    <div class="row mb-4 g-3">
 
-<!-- Username -->
+        <div class="col-lg-8">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <h5 class="mb-3">Task Overview</h5>
+                    <canvas id="taskChart"></canvas>
+                </div>
+            </div>
+        </div>
 
-<h4>{{ user.username }}</h4>
+        <div class="col-lg-4">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <h5 class="mb-3">Status Summary</h5>
 
-<!-- Email -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span>Todo</span>
+                        <span class="badge bg-secondary">{{ stats.todo }}</span>
+                    </div>
 
-<p class="text-muted">{{ user.email }}</p>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span>Doing</span>
+                        <span class="badge bg-warning text-dark">{{ stats.doing }}</span>
+                    </div>
 
-<!-- Join Date -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Done</span>
+                        <span class="badge bg-success">{{ stats.done }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-<p class="text-muted">
+    </div>
 
-Joined: {{ user.date_joined|date:"Y-m-d" }}
+    <!-- Overdue Tasks -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <h5 class="text-danger mb-3">Overdue Tasks</h5>
 
-</p>
+            <ul class="list-group">
+                {% for t in overdue_tasks %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ t.title }}</span>
+                        <span class="badge bg-danger">{{ t.due_date }}</span>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item text-muted">
+                        No overdue tasks
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
 
-<!-- Edit Profile Button -->
+    <!-- Recent Projects and Recent Tasks -->
+    <div class="row g-3">
 
-<a href="/accounts/profile/edit/" class="btn btn-primary">
+        <div class="col-md-6">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <h5 class="mb-3">Recent Projects</h5>
 
-Edit Profile
+                    <ul class="list-group">
+                        {% for p in projects %}
+                            <li class="list-group-item">
+                                {{ p.title }}
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item text-muted">
+                                No projects
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
 
-</a>
+        <div class="col-md-6">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <h5 class="mb-3">Recent Tasks</h5>
+
+                    <ul class="list-group">
+                        {% for t in tasks %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ t.title }}</span>
+                                <span class="badge
+                                    {% if t.status == 'todo' %}bg-secondary
+                                    {% elif t.status == 'doing' %}bg-warning text-dark
+                                    {% elif t.status == 'done' %}bg-success
+                                    {% endif %}
+                                ">
+                                    {{ t.status|title }}
+                                </span>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item text-muted">
+                                No tasks
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
 
 </div>
 
-</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const ctx = document.getElementById("taskChart");
+    if (!ctx) return;
 
-</div>
+    const todo = Number("{{ stats.todo|default:0 }}");
+    const doing = Number("{{ stats.doing|default:0 }}");
+    const done = Number("{{ stats.done|default:0 }}");
 
-</div>
-
-<hr class="my-5">
-
-<!-- Future modules placeholder -->
-
-<div class="row">
-
-<div class="col-md-6">
-
-<div class="card shadow">
-
-<div class="card-body">
-
-<h5>Recent Projects</h5>
-
-<p class="text-muted">
-
-No projects yet.
-
-</p>
-
-</div>
-
-</div>
-
-</div>
-
-<div class="col-md-6">
-
-<div class="card shadow">
-
-<div class="card-body">
-
-<h5>Recent Tasks</h5>
-
-<p class="text-muted">
-
-No tasks yet.
-
-</p>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
+    new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels: ["Todo", "Doing", "Done"],
+            datasets: [{
+                data: [todo, doing, done]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true
+        }
+    });
+});
+</script>
 
 {% endblock %}
