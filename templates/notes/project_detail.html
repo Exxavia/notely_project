@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <!-- Header -->
+    <div class="mb-4">
+        <h2>{{ project.title }}</h2>
+        <p class="text-muted">{{ project.description }}</p>
+    </div>
+
+    <!-- Add Task -->
+    <form method="POST" action="{% url 'add_task' project.id %}" class="row g-2 mb-4">
+        {% csrf_token %}
+
+        <div class="col-md-2">
+            <input type="text" name="title" class="form-control" placeholder="Task title" required>
+        </div>
+
+        <div class="col-md-2">
+            <input type="text" name="description" class="form-control" placeholder="Description">
+        </div>
+
+        <div class="col-md-2">
+            <input type="date" name="due_date" class="form-control">
+        </div>
+
+        <div class="col-md-2">
+            <select name="priority" class="form-select">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+        </div>
+
+        <!-- Subtask support -->
+        <div class="col-md-2">
+            <select name="parent" class="form-select">
+                <option value="">Top level</option>
+                {% for t in tasks %}
+                    <option value="{{ t.id }}">{{ t.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100">Add</button>
+        </div>
+
+    </form>
+
+    <!-- Task List -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <ul class="list-group list-group-flush">
+
+            {% for task in tasks %}
+                <li class="list-group-item">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <!-- Left -->
+                        <div class="d-flex align-items-center gap-2">
+
+                            <!-- Task title -->
+                            <a href="{% url 'task_detail' task.id %}"
+                               class="fw-bold text-decoration-none
+                               {% if task.status == 'done' %}
+                                   text-decoration-line-through text-muted
+                               {% endif %}">
+                                {{ task.title }}
+                            </a>
+
+                        </div>
+
+                        <!-- Right -->
+                        <div class="d-flex align-items-center gap-2">
+
+                            <!-- Status badge -->
+                            <span class="badge
+                                {% if task.status == 'todo' %}bg-secondary
+                                {% elif task.status == 'doing' %}bg-warning text-dark
+                                {% elif task.status == 'done' %}bg-success
+                                {% endif %}
+                            ">
+                                {{ task.status|title }}
+                            </span>
+
+                            <!-- Priority -->
+                            <span class="small text-muted">
+                                {{ task.priority|title }}
+                            </span>
+
+                            <!-- Quick Access -->
+                            <form method="POST" action="{% url 'toggle_quick_access' task.id %}">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-outline-primary">
+                                    {% if task.is_quick_access %}
+                                        ★
+                                    {% else %}
+                                        ☆
+                                    {% endif %}
+                                </button>
+                            </form>
+
+                            <!-- Delete -->
+                            <form method="POST" action="{% url 'delete_task' task.id %}">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-outline-danger">
+                                    Delete
+                                </button>
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Subtasks -->
+                    {% if task.subtasks.all %}
+                        <ul class="mt-2 ms-4">
+                            {% for sub in task.subtasks.all %}
+                                <li>
+                                    ↳ {{ sub.title }}
+                                    <span class="badge ms-2
+                                        {% if sub.status == 'todo' %}bg-secondary
+                                        {% elif sub.status == 'doing' %}bg-warning text-dark
+                                        {% elif sub.status == 'done' %}bg-success
+                                        {% endif %}
+                                    ">
+                                        {{ sub.status|title }}
+                                    </span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+
+                </li>
+
+            {% empty %}
+                <li class="list-group-item text-muted text-center">
+                    No tasks yet
+                </li>
+            {% endfor %}
+
+            </ul>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}
