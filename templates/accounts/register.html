@@ -4,27 +4,17 @@
 Register
 {% endblock %}
 
-
-
 {% block content %}
 
 <div class="row justify-content-center">
 
-    <div class="col-md-5">
+    <div class="col-md-6">
 
-        <div class="card shadow border-0">
+        <div class="card shadow">
 
-            <div class="card-body p-4">
+            <div class="card-body">
 
                 <h3 class="text-center mb-4">Create Account</h3>
-
-                {% if messages %} 
-                    {% for message in messages %} 
-                        <div class="alert alert-warning"> 
-                            {{ message }} 
-                        </div> 
-                    {% endfor %} 
-                {% endif %}
 
                 <form method="POST" enctype="multipart/form-data">
 
@@ -34,65 +24,51 @@ Register
 
                     <div class="mb-3">
                         <label class="form-label">Username</label>
-                        <input type="text" name="username" value="{{ request.POST.username }}" class="form-control {% if user_form.username.errors %}is-invalid{% endif %}" placeholder="Choose a username">
-                        {% if user_form.username.errors %} 
-                            <div class="text-danger"> 
-                                {{ user_form.username.errors.0 }} 
-                            </div> 
-                        {% endif %}
+                        {{ user_form.username }}
+                        <div class="text-danger">
+                            {{ user_form.username.errors }}
+                        </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Email</label>
-                        <input type="text" name="email" value="{{ request.POST.email }}" class="form-control {% if user_form.email.errors %}is-invalid{% endif %}" placeholder="Enter your email address">
-                        {% if user_form.email.errors %} 
-                            <div class="text-danger"> 
-                                {{ user_form.email.errors.0 }} 
-                            </div> 
-                        {% endif %}
+                        {{ user_form.email }}
+                        <div class="text-danger">
+                            {{ user_form.email.errors }}
+                        </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Password</label>
-                        <input type="password" name="password" class="form-control {% if user_form.password.errors %}is-invalid{% endif %}" placeholder="Create a password">
-                        {% if user_form.password.errors %} 
-                            <div class="text-danger"> 
-                                {{ user_form.password.errors.0 }} 
-                            </div> 
-                        {% endif %}
+                        {{ user_form.password }}
+                        <div class="text-danger">
+                            {{ user_form.password.errors }}
+                        </div>
                     </div>
 
-                    <div class="text-center mb-3"> 
-                        <img id="avatarPreview" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" width="100" height="100" class="rounded-circle" style="object-fit: cover;"> 
+                    <div class="mb-3">
+                        <label class="form-label">Avatar</label>
+                        {{ profile_form.avatar }}
+                        <div class="text-danger">
+                            {{ profile_form.avatar.errors }}
+                        </div>
                     </div>
 
-                    <div class="mb-3"> 
-                        <label class="form-label">Avatar</label> 
-                        <input type="file" name="avatar" class="form-control {% if profile_form.avatar.errors %}is-invalid{% endif %}" accept="image/*" onchange="previewAvatar(event)"> 
-                        {% if profile_form.avatar.errors %} 
-                            <div class="text-danger"> 
-                                {{ profile_form.avatar.errors.0 }} 
-                            </div> 
-                        {% endif %} 
+                    <div class="mb-3">
+                        <label class="form-label">Bio</label>
+                        {{ profile_form.bio }}
+                        <div class="text-danger">
+                            {{ profile_form.bio.errors }}
+                        </div>
                     </div>
 
-                    <div class="mb-3"> 
-                        <label class="form-label">Bio</label> 
-                        <textarea name="bio" class="form-control {% if profile_form.bio.errors %}is-invalid{% endif %}" rows="4" placeholder="Tell us a bit about yourself...">{{ request.POST.bio }}</textarea> 
-                        {% if profile_form.bio.errors %} 
-                            <div class="text-danger"> 
-                                {{ profile_form.bio.errors.0 }} 
-                            </div> 
-                        {% endif %} 
-                    </div>
-
-                    <button class="btn btn-primary w-100 mb-3">
+                    <button class="btn btn-primary w-100">
                         Register
                     </button>
 
                 </form>
 
-                <div class="text-center">
+                <div class="text-center mt-3">
                     Already have an account?
                     <a href="/accounts/login/">Login</a>
                 </div>
@@ -104,15 +80,5 @@ Register
     </div>
 
 </div>
-
-<script>
-    function previewAvatar(event) {
-        const preview = document.getElementById('avatarPreview');
-    
-        if (event.target.files && event.target.files[0]) {
-            preview.src = URL.createObjectURL(event.target.files[0]);
-        }
-    }
-</script>
 
 {% endblock %}

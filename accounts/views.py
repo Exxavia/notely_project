@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -8,14 +8,14 @@ from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes
+from django.utils.timezone import now
 
 from .forms import UserRegisterForm, UserProfileForm
 from .tokens import account_activation_token
 
 
 # --------------------------------------------------
-# Register View
-# Creates new user and sends activation email
+# Register
 # --------------------------------------------------
 def register(request):
 
@@ -28,105 +28,74 @@ def register(request):
 
             user = user_form.save(commit=False)
 
-            # Prevent duplicate email registration
             if User.objects.filter(email=user.email).exists():
-
                 messages.error(request, "Email is already registered.")
                 return redirect("register")
 
-            # Deactivate account until email verification
+            user.set_password(user_form.cleaned_data["password"])
             user.is_active = False
-
-            # Encrypt password
-            user.set_password(user.password)
             user.save()
 
-            # Create user profile
-            profile = profile_form.save(commit=False)
-            profile.user = user
+            # profile created by signal
+            profile = user.userprofile
+            profile.avatar = profile_form.cleaned_data.get("avatar")
+            profile.bio = profile_form.cleaned_data.get("bio")
             profile.save()
 
-            # Generate activation token
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = account_activation_token.make_token(user)
 
             activation_link = request.build_absolute_uri(
-                reverse(
-                    "activate",
-                    kwargs={
-                        "uidb64": uid,
-                        "token": token
-                    }
-                )
+                reverse("activate", kwargs={"uidb64": uid, "token": token})
             )
 
-            # Send activation email
             send_mail(
                 subject="Activate your Notely account",
-                message=f"Click the link below to activate your account:\n\n{activation_link}",
+                message=f"Click the link below:\n\n{activation_link}",
                 from_email="admin@notely.com",
                 recipient_list=[user.email],
                 fail_silently=False
             )
 
-            messages.success(
-                request,
-                "Registration successful. Please check your email to activate your account."
-            )
-
+            messages.success(request, "Check terminal to activate account.")
             return redirect("login")
 
         else:
-
-            messages.error(request, "Registration failed. Please check the form.")
+            messages.error(request, "Registration failed.")
 
     else:
-
         user_form = UserRegisterForm()
         profile_form = UserProfileForm()
 
-    context = {
+    return render(request, "accounts/register.html", {
         "user_form": user_form,
         "profile_form": profile_form
-    }
-
-    return render(request, "accounts/register.html", context)
+    })
 
 
 # --------------------------------------------------
-# Account Activation View
-# Activates user account via email link
+# Activate
 # --------------------------------------------------
 def activate(request, uidb64, token):
 
     try:
-
         uid = urlsafe_base64_decode(uidb64).decode()
-        user = User.objects.get(pk=uid)
-
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-
+        user = get_object_or_404(User, pk=uid)
+    except:
         user = None
 
     if user and account_activation_token.check_token(user, token):
-
         user.is_active = True
         user.save()
-
-        messages.success(request, "Account activated. You can now login.")
-
+        messages.success(request, "Account activated.")
         return redirect("login")
 
-    else:
-
-        messages.error(request, "Activation link is invalid or expired.")
-
-        return redirect("login")
+    messages.error(request, "Invalid or expired link.")
+    return redirect("login")
 
 
 # --------------------------------------------------
-# Login View
-# Authenticates user credentials
+# Login
 # --------------------------------------------------
 def user_login(request):
 
@@ -137,64 +106,74 @@ def user_login(request):
 
         user = authenticate(username=username, password=password)
 
-        if user is not None:
-
+        if user:
             if user.is_active:
-
                 login(request, user)
                 return redirect("dashboard")
-
             else:
-
-                messages.error(
-                    request,
-                    "Your account is not activated. Please verify your email."
-                )
-
+                messages.error(request, "Account not activated.")
         else:
-
-            messages.error(request, "Invalid username or password.")
+            messages.error(request, "Invalid credentials.")
 
     return render(request, "accounts/login.html")
 
 
 # --------------------------------------------------
-# Logout View
-# Logs user out of session
+# Logout
 # --------------------------------------------------
 def user_logout(request):
-
     logout(request)
-
-    messages.info(request, "You have been logged out.")
-
+    messages.info(request, "Logged out.")
     return redirect("login")
 
 
 # --------------------------------------------------
-# Dashboard View
-# Main page after login
+# Dashboard (🔥 FINAL VERSION)
 # --------------------------------------------------
 @login_required
 def dashboard(request):
-
     profile = request.user.userprofile
 
-    context = {
-        "user": request.user,
-        "profile": profile,
+    from notes.models import Project, Task
 
-        # Future integration for team modules
-        "projects": [],   # Project.objects.filter(owner=request.user)
-        "tasks": []       # Task.objects.filter(user=request.user)
+    projects = Project.objects.filter(
+        owner=request.user
+    ).order_by('-created_at')[:5]
+
+    tasks = Task.objects.filter(
+        project__owner=request.user
+    ).order_by('-created_at')[:5]
+
+    overdue_tasks = Task.objects.filter(
+        project__owner=request.user,
+        due_date__lt=now().date(),
+        status__in=['todo', 'doing']
+    ).order_by('due_date')[:5]
+
+    stats = {
+        'todo': Task.objects.filter(project__owner=request.user, status='todo').count(),
+        'doing': Task.objects.filter(project__owner=request.user, status='doing').count(),
+        'done': Task.objects.filter(project__owner=request.user, status='done').count(),
+        'project_count': Project.objects.filter(owner=request.user).count(),
+        'task_count': Task.objects.filter(project__owner=request.user).count(),
+        'overdue_count': Task.objects.filter(
+            project__owner=request.user,
+            due_date__lt=now().date(),
+            status__in=['todo', 'doing']
+        ).count(),
     }
 
-    return render(request, "accounts/dashboard.html", context)
-
+    return render(request, "accounts/dashboard.html", {
+        "user": request.user,
+        "profile": profile,
+        "projects": projects,
+        "tasks": tasks,
+        "overdue_tasks": overdue_tasks,
+        "stats": stats
+    })
 
 # --------------------------------------------------
-# Edit Profile View
-# Allows user to update email, avatar and bio
+# Edit Profile
 # --------------------------------------------------
 @login_required
 def edit_profile(request):
@@ -216,47 +195,34 @@ def edit_profile(request):
 
             profile_form.save()
 
-            # Update email only if changed
             if new_email and new_email != user.email:
-
                 if User.objects.filter(email=new_email).exists():
-
-                    messages.error(request, "This email is already in use.")
-
+                    messages.error(request, "Email already used.")
                     return redirect("edit_profile")
 
                 user.email = new_email
                 user.save()
 
-            messages.success(request, "Profile updated successfully.")
-
+            messages.success(request, "Profile updated.")
             return redirect("profile")
 
     else:
-
         profile_form = UserProfileForm(instance=profile)
 
-    context = {
+    return render(request, "accounts/edit_profile.html", {
         "profile_form": profile_form,
         "user": user,
         "profile": profile
-    }
-
-    return render(request, "accounts/edit_profile.html", context)
+    })
 
 
 # --------------------------------------------------
-# Profile View
-# Displays user profile information
+# Profile
 # --------------------------------------------------
 @login_required
 def profile(request):
 
-    profile = request.user.userprofile
-
-    context = {
+    return render(request, "accounts/profile.html", {
         "user": request.user,
-        "profile": profile
-    }
-
-    return render(request, "accounts/profile.html", context)
+        "profile": request.user.userprofile
+    })
