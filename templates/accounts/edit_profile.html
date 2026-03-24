@@ -64,12 +64,9 @@ Edit Profile
 
 
 <div class="mb-3">
-
-<label class="form-label">Bio</label>
-
-{{ profile_form.bio }}
-
-</div>
+     <label class="form-label">Bio</label>
+     <textarea name="bio" class="form-control" rows="4" placeholder="Tell us a bit about yourself...">{{ profile_form.bio.value|default:'' }}</textarea>
+ </div>
 
 <button class="btn btn-primary w-100">
 
