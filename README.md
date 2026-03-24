@@ -12,6 +12,9 @@ A Django-based collaborative note and task management system.
 - Profile management
 - Avatar upload
 
+- UI cleaned up
+- Unit testing
+
 ## Installation
 
 Clone the repository:

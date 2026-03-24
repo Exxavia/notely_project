@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h2>{{ task.title }}</h2>
+
+    <p class="text-muted">
+        Priority: {{ task.priority|title }}
+        {% if task.due_date %}| Due: {{ task.due_date }}{% endif %}
+    </p>
+
+    <!-- Status -->
+    <p>
+        <strong>Status:</strong>
+        <span id="status-badge" class="badge bg-secondary"></span>
+            {{ task.status|title }}
+        </span>
+    </p>
+
+    <!-- Status Buttons -->
+    <div class="mb-3">
+        <button class="status-btn btn btn-sm btn-outline-secondary" data-id="{{ task.id }}" data-status="todo">Todo</button>
+        <button class="status-btn btn btn-sm btn-outline-warning" data-id="{{ task.id }}" data-status="doing">Doing</button>
+        <button class="status-btn btn btn-sm btn-outline-success" data-id="{{ task.id }}" data-status="done">Done</button>
+    </div>
+
+    <!-- ⭐ AJAX Quick -->
+    <button class="btn btn-primary btn-sm mb-2 quick-btn"
+            data-id="{{ task.id }}">
+        {% if task.is_quick_access %}
+            Remove from Quick Access
+        {% else %}
+            Add to Quick Access
+        {% endif %}
+    </button>
+
+    <!-- Delete -->
+    <form method="POST" action="{% url 'delete_task' task.id %}">
+        {% csrf_token %}
+        <button class="btn btn-danger btn-sm">Delete</button>
+    </form>
+
+    <!-- Subtasks -->
+    <ul id="subtask-list" class="list-group mt-4">
+        {% for sub in subtasks %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span class="subtask-title">{{ sub.title }}</span>
+
+            <button class="toggle-subtask btn btn-sm btn-outline-success"
+                    data-id="{{ sub.id }}">
+                {% if sub.status == 'done' %}✓{% else %}⬜{% endif %}
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<script>
+
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// ✅ Task Status AJAX
+document.querySelectorAll('.status-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+// ---------------- STATUS AJAX ----------------
+        fetch(`/task/${this.dataset.id}/status/${this.dataset.status}/`, {
+            method: "POST",
+            headers: {'X-CSRFToken': getCSRFToken()}
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("status-badge").innerText = data.status;
+        });
+
+    });
+
+});
+
+// ✅ Quick Access AJAX
+document.addEventListener("click", function(e) {
+    if (e.target.classList.contains("quick-btn")) {
+        const btn = e.target;
+        fetch(`/task/${btn.dataset.id}/quick/`, {
+            method: "POST",
+            headers: {'X-CSRFToken': getCSRFToken()}
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.innerText = data.quick
+                ? "Remove from Quick Access"
+                : "Add to Quick Access";
+        });
+    }
+});
+
+
+// ✅ Subtask AJAX
+document.addEventListener('click', function(e) {
+
+    if (e.target.classList.contains('toggle-subtask')) {
+
+        const btn = e.target;
+
+        fetch(`/subtask/${btn.dataset.id}/toggle/`, {
+            method: "POST",
+            headers: {'X-CSRFToken': getCSRFToken()}
+        })
+        .then(res => res.json())
+        .then(data => {
+
+            btn.innerText = data.status === "done" ? "✓" : "⬜";
+        });
+
+    }
+
+});
+
+</script>
+
+{% endblock %}
