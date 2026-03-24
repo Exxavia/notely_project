@@ -33,7 +33,6 @@
             </select>
         </div>
 
-        <!-- Subtask support -->
         <div class="col-md-2">
             <select name="parent" class="form-select">
                 <option value="">Top level</option>
@@ -61,23 +60,18 @@
                     <div class="d-flex justify-content-between align-items-center">
 
                         <!-- Left -->
-                        <div class="d-flex align-items-center gap-2">
-
-                            <!-- Task title -->
-                            <a href="{% url 'task_detail' task.id %}"
-                               class="fw-bold text-decoration-none
-                               {% if task.status == 'done' %}
-                                   text-decoration-line-through text-muted
-                               {% endif %}">
-                                {{ task.title }}
-                            </a>
-
-                        </div>
+                        <a href="{% url 'task_detail' task.id %}"
+                           class="fw-bold text-decoration-none
+                           {% if task.status == 'done' %}
+                               text-decoration-line-through text-muted
+                           {% endif %}">
+                            {{ task.title }}
+                        </a>
 
                         <!-- Right -->
                         <div class="d-flex align-items-center gap-2">
 
-                            <!-- Status badge -->
+                            <!-- Status -->
                             <span class="badge
                                 {% if task.status == 'todo' %}bg-secondary
                                 {% elif task.status == 'doing' %}bg-warning text-dark
@@ -92,24 +86,16 @@
                                 {{ task.priority|title }}
                             </span>
 
-                            <!-- Quick Access -->
-                            <form method="POST" action="{% url 'toggle_quick_access' task.id %}">
-                                {% csrf_token %}
-                                <button class="btn btn-sm btn-outline-primary">
-                                    {% if task.is_quick_access %}
-                                        ★
-                                    {% else %}
-                                        ☆
-                                    {% endif %}
-                                </button>
-                            </form>
+                            <!-- ⭐ AJAX Quick -->
+                            <button class="btn btn-sm btn-outline-primary quick-btn"
+                                    data-id="{{ task.id }}">
+                                {% if task.is_quick_access %}★{% else %}☆{% endif %}
+                            </button>
 
                             <!-- Delete -->
                             <form method="POST" action="{% url 'delete_task' task.id %}">
                                 {% csrf_token %}
-                                <button class="btn btn-sm btn-outline-danger">
-                                    Delete
-                                </button>
+                                <button class="btn btn-sm btn-outline-danger">Delete</button>
                             </form>
 
                         </div>
@@ -122,24 +108,11 @@
                             {% for sub in task.subtasks.all %}
                                 <li>
                                     ↳ {{ sub.title }}
-                                    <span class="badge ms-2
-                                        {% if sub.status == 'todo' %}bg-secondary
-                                        {% elif sub.status == 'doing' %}bg-warning text-dark
-                                        {% elif sub.status == 'done' %}bg-success
-                                        {% endif %}
-                                    ">
-                                        {{ sub.status|title }}
-                                    </span>
                                 </li>
                             {% endfor %}
                         </ul>
                     {% endif %}
 
-                </li>
-
-            {% empty %}
-                <li class="list-group-item text-muted text-center">
-                    No tasks yet
                 </li>
             {% endfor %}
 
@@ -149,4 +122,30 @@
     </div>
 
 </div>
+
+<script>
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+document.addEventListener("click", function(e) {
+    if (e.target.classList.contains("quick-btn")) {
+
+        const btn = e.target;
+        const taskId = btn.dataset.id;
+
+        fetch(`/task/${taskId}/quick/`, {
+            method: "POST",
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.innerText = data.quick ? "★" : "☆";
+        });
+    }
+});
+</script>
+
 {% endblock %}

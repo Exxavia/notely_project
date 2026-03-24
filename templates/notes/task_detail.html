@@ -7,44 +7,33 @@
 
     <p class="text-muted">
         Priority: {{ task.priority|title }}
-
-        {% if task.due_date %}
-            | Due: {{ task.due_date }}
-        {% endif %}
-
-        {% if task.is_overdue %}
-            <span class="text-danger fw-bold ms-2">Overdue</span>
-        {% endif %}
+        {% if task.due_date %}| Due: {{ task.due_date }}{% endif %}
     </p>
 
     <!-- Status -->
     <p>
         <strong>Status:</strong>
-        <span id="status-badge"
-              class="badge
-                {% if task.status == 'todo' %}bg-secondary
-                {% elif task.status == 'doing' %}bg-warning text-dark
-                {% elif task.status == 'done' %}bg-success
-                {% endif %}
-              ">
+        <span id="status-badge" class="badge bg-secondary">
             {{ task.status|title }}
         </span>
     </p>
 
-    <!-- STATUS BUTTONS (AJAX) -->
+    <!-- Status Buttons -->
     <div class="mb-3">
         <button class="status-btn btn btn-sm btn-outline-secondary" data-id="{{ task.id }}" data-status="todo">Todo</button>
         <button class="status-btn btn btn-sm btn-outline-warning" data-id="{{ task.id }}" data-status="doing">Doing</button>
         <button class="status-btn btn btn-sm btn-outline-success" data-id="{{ task.id }}" data-status="done">Done</button>
     </div>
 
-    <!-- Quick Access -->
-    <form method="POST" action="{% url 'toggle_quick_access' task.id %}">
-        {% csrf_token %}
-        <button class="btn btn-primary btn-sm mb-2">
-            {% if task.is_quick_access %}Remove from Quick Access{% else %}Add to Quick Access{% endif %}
-        </button>
-    </form>
+    <!-- ⭐ AJAX Quick -->
+    <button class="btn btn-primary btn-sm mb-2 quick-btn"
+            data-id="{{ task.id }}">
+        {% if task.is_quick_access %}
+            Remove from Quick Access
+        {% else %}
+            Add to Quick Access
+        {% endif %}
+    </button>
 
     <!-- Delete -->
     <form method="POST" action="{% url 'delete_task' task.id %}">
@@ -52,187 +41,78 @@
         <button class="btn btn-danger btn-sm">Delete</button>
     </form>
 
-    <!-- Add Subtask (AJAX) -->
-    <form id="subtask-form" method="POST" action="{% url 'add_subtask' task.id %}" class="mt-4">
-        {% csrf_token %}
-        <div class="row g-2">
-            <div class="col-md-8">
-                <input type="text" name="title" class="form-control" placeholder="New subtask..." required>
-            </div>
-            <div class="col-md-4">
-                <button class="btn btn-success w-100">Add Subtask</button>
-            </div>
-        </div>
-    </form>
-
     <!-- Subtasks -->
-    <div class="mt-4">
-        <h5>Subtasks</h5>
+    <ul id="subtask-list" class="list-group mt-4">
+        {% for sub in subtasks %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span class="subtask-title">{{ sub.title }}</span>
 
-        <ul id="subtask-list" class="list-group">
-
-            {% for sub in subtasks %}
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-
-                <span class="subtask-title">
-                    {% if sub.status == 'done' %}
-                        <s class="text-muted">{{ sub.title }}</s>
-                    {% else %}
-                        {{ sub.title }}
-                    {% endif %}
-                </span>
-
-                <div>
-
-                    <span class="badge bg-light text-dark me-2">
-                        {{ sub.status|title }}
-                    </span>
-
-                    <!-- ✅ AJAX BUTTON (NO FORM, NO LINK) -->
-                    <button class="toggle-subtask btn btn-sm btn-outline-success"
-                            data-id="{{ sub.id }}">
-                        {% if sub.status == 'done' %}✓{% else %}⬜{% endif %}
-                    </button>
-
-                </div>
-
-            </li>
-            {% empty %}
-            <li class="list-group-item text-muted">No subtasks</li>
-            {% endfor %}
-
-        </ul>
-    </div>
-
-    <div class="mt-4">
-        <a href="{% url 'project_detail' task.project.id %}" class="btn btn-secondary">
-            Back to Project
-        </a>
-    </div>
+            <button class="toggle-subtask btn btn-sm btn-outline-success"
+                    data-id="{{ sub.id }}">
+                {% if sub.status == 'done' %}✓{% else %}⬜{% endif %}
+            </button>
+        </li>
+        {% endfor %}
+    </ul>
 
 </div>
 
-
-<!-- ================= JAVASCRIPT ================= -->
 <script>
 
-// ---------------- CSRF ----------------
 function getCSRFToken() {
     return document.querySelector('[name=csrfmiddlewaretoken]').value;
 }
 
+// ✅ Task Status AJAX
+document.querySelectorAll('.status-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
 
-// ---------------- STATUS AJAX ----------------
-document.querySelectorAll('.status-btn').forEach(button => {
-
-    button.addEventListener('click', function() {
-
-        const taskId = this.dataset.id;
-        const status = this.dataset.status;
-
-        fetch(`/task/${taskId}/status/${status}/`, {
+        fetch(`/task/${this.dataset.id}/status/${this.dataset.status}/`, {
             method: "POST",
-            headers: {
-                'X-CSRFToken': getCSRFToken()
-            }
+            headers: {'X-CSRFToken': getCSRFToken()}
         })
         .then(res => res.json())
         .then(data => {
-
-            const badge = document.getElementById("status-badge");
-
-            badge.innerText = data.status.charAt(0).toUpperCase() + data.status.slice(1);
-
-            badge.className = "badge";
-
-            if (data.status === "todo") {
-                badge.classList.add("bg-secondary");
-            } else if (data.status === "doing") {
-                badge.classList.add("bg-warning", "text-dark");
-            } else if (data.status === "done") {
-                badge.classList.add("bg-success");
-            }
-
+            document.getElementById("status-badge").innerText = data.status;
         });
 
     });
-
 });
 
+// ✅ Quick Access AJAX
+document.addEventListener("click", function(e) {
+    if (e.target.classList.contains("quick-btn")) {
 
-// ---------------- ADD SUBTASK AJAX ----------------
-document.getElementById('subtask-form').addEventListener('submit', function(e) {
+        const btn = e.target;
 
-    e.preventDefault();
+        fetch(`/task/${btn.dataset.id}/quick/`, {
+            method: "POST",
+            headers: {'X-CSRFToken': getCSRFToken()}
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.innerText = data.quick
+                ? "Remove from Quick Access"
+                : "Add to Quick Access";
+        });
 
-    const input = this.querySelector('input[name="title"]');
-
-    fetch(this.action, {
-        method: "POST",
-        headers: {
-            'X-CSRFToken': getCSRFToken()
-        },
-        body: new FormData(this)
-    })
-    .then(res => res.json())
-    .then(data => {
-
-        const list = document.getElementById("subtask-list");
-
-        const li = document.createElement('li');
-        li.className = "list-group-item d-flex justify-content-between align-items-center";
-
-        li.innerHTML = `
-            <span class="subtask-title">${data.title}</span>
-            <div>
-                <span class="badge bg-light text-dark me-2">${data.status}</span>
-                <button class="toggle-subtask btn btn-sm btn-outline-success" data-id="">
-                    ⬜
-                </button>
-            </div>
-        `;
-
-        list.prepend(li);
-        input.value = "";
-
-    });
-
+    }
 });
 
-
-// ---------------- TOGGLE SUBTASK AJAX ----------------
+// ✅ Subtask AJAX
 document.addEventListener('click', function(e) {
 
     if (e.target.classList.contains('toggle-subtask')) {
 
         const btn = e.target;
-        const subtaskId = btn.dataset.id;
 
-        fetch(`/subtask/${subtaskId}/toggle/`, {
+        fetch(`/subtask/${btn.dataset.id}/toggle/`, {
             method: "POST",
-            headers: {
-                'X-CSRFToken': getCSRFToken()
-            }
+            headers: {'X-CSRFToken': getCSRFToken()}
         })
         .then(res => res.json())
         .then(data => {
-
-            const li = btn.closest('li');
-            const title = li.querySelector('.subtask-title');
-            const badge = li.querySelector('.badge');
-
-            // Update text style
-            if (data.status === "done") {
-                title.innerHTML = `<s class="text-muted">${title.innerText}</s>`;
-                btn.innerText = "✓";
-            } else {
-                title.innerText = title.innerText;
-                btn.innerText = "⬜";
-            }
-
-            // Update badge
-            badge.innerText = data.status.charAt(0).toUpperCase() + data.status.slice(1);
-
+            btn.innerText = data.status === "done" ? "✓" : "⬜";
         });
 
     }
