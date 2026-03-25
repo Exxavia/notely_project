@@ -8,205 +8,222 @@ Dashboard
 
 <div class="container mt-4">
 
-    <!-- User Info -->
-    <div class="row justify-content-center mb-4">
-        <div class="col-lg-6">
-            <div class="card shadow text-center">
-                <div class="card-body">
-                    <h3 class="mb-4">User Dashboard</h3>
-
-                    {% if profile.avatar %}
-                        <img src="{{ profile.avatar.url }}"
-                             width="120"
-                             height="120"
-                             class="rounded-circle mb-3">
-                    {% else %}
-                        <img src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                             width="120"
-                             height="120"
-                             class="rounded-circle mb-3">
-                    {% endif %}
-
-                    <h4>{{ user.username }}</h4>
-                    <p class="text-muted mb-1">{{ user.email }}</p>
-                    <p class="text-muted">Joined: {{ user.date_joined|date:"Y-m-d" }}</p>
-
-                    <a href="/accounts/profile/edit/" class="btn btn-primary">
-                        Edit Profile
-                    </a>
-                </div>
-            </div>
-        </div>
+    <!-- Header -->
+    <div class="text-center mb-4">
+        <h2>Dashboard</h2>
+        <p class="text-muted">Interactive task analytics</p >
     </div>
 
-    <!-- Summary Cards -->
-    <div class="row mb-4 g-3">
-
+    <!-- Summary -->
+    <div class="row text-center mb-4">
         <div class="col-md-4">
-            <div class="card shadow text-center h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Projects</h6>
-                    <h2>{{ stats.project_count }}</h2>
-                </div>
+            <div class="card shadow-sm p-3">
+                <h6>Total Tasks</h6>
+                <h3 id="total-count">0</h3>
             </div>
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow text-center h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Tasks</h6>
-                    <h2>{{ stats.task_count }}</h2>
-                </div>
+            <div class="card shadow-sm p-3">
+                <h6>Completed</h6>
+                <h3 id="done-count">0</h3>
             </div>
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow text-center h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Overdue</h6>
-                    <h2 class="text-danger">{{ stats.overdue_count }}</h2>
-                </div>
+            <div class="card shadow-sm p-3">
+                <h6>Overdue</h6>
+                <h3 id="overdue-count">0</h3>
             </div>
-        </div>
-
-    </div>
-
-    <!-- Chart + Status Cards -->
-    <div class="row mb-4 g-3">
-
-        <div class="col-lg-8">
-            <div class="card shadow h-100">
-                <div class="card-body">
-                    <h5 class="mb-3">Task Overview</h5>
-                    <canvas id="taskChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card shadow h-100">
-                <div class="card-body">
-                    <h5 class="mb-3">Status Summary</h5>
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span>Todo</span>
-                        <span class="badge bg-secondary">{{ stats.todo }}</span>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span>Doing</span>
-                        <span class="badge bg-warning text-dark">{{ stats.doing }}</span>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span>Done</span>
-                        <span class="badge bg-success">{{ stats.done }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Overdue Tasks -->
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <h5 class="text-danger mb-3">Overdue Tasks</h5>
-
-            <ul class="list-group">
-                {% for t in overdue_tasks %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>{{ t.title }}</span>
-                        <span class="badge bg-danger">{{ t.due_date }}</span>
-                    </li>
-                {% empty %}
-                    <li class="list-group-item text-muted">
-                        No overdue tasks
-                    </li>
-                {% endfor %}
-            </ul>
         </div>
     </div>
 
-    <!-- Recent Projects and Recent Tasks -->
-    <div class="row g-3">
+    <!-- Buttons -->
+    <div class="text-center mb-3">
+        <button class="btn btn-outline-primary chart-btn active" data-type="status">Status</button>
+        <button class="btn btn-outline-secondary chart-btn" data-type="priority">Priority</button>
+        <button class="btn btn-outline-danger chart-btn" data-type="overdue">Overdue</button>
+    </div>
 
-        <div class="col-md-6">
-            <div class="card shadow h-100">
-                <div class="card-body">
-                    <h5 class="mb-3">Recent Projects</h5>
+    <!-- Chart -->
+    <div class="card shadow-sm p-4">
+        <canvas id="taskChart"></canvas>
+    </div>
 
-                    <ul class="list-group">
-                        {% for p in projects %}
-                            <li class="list-group-item">
-                                {{ p.title }}
-                            </li>
-                        {% empty %}
-                            <li class="list-group-item text-muted">
-                                No projects
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
+    <!-- Insight -->
+    <div class="text-center mt-3">
+        <p id="insight-text" class="fw-bold text-primary"></p >
+    </div>
+
+    <!-- 🔥 NEW: Filtered Tasks -->
+    <div class="mt-5">
+        <h5 class="text-center">Filtered Tasks</h5>
+
+        <div id="loading" class="text-center text-muted" style="display:none;">
+            Loading...
         </div>
 
-        <div class="col-md-6">
-            <div class="card shadow h-100">
-                <div class="card-body">
-                    <h5 class="mb-3">Recent Tasks</h5>
-
-                    <ul class="list-group">
-                        {% for t in tasks %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span>{{ t.title }}</span>
-                                <span class="badge
-                                    {% if t.status == 'todo' %}bg-secondary
-                                    {% elif t.status == 'doing' %}bg-warning text-dark
-                                    {% elif t.status == 'done' %}bg-success
-                                    {% endif %}
-                                ">
-                                    {{ t.status|title }}
-                                </span>
-                            </li>
-                        {% empty %}
-                            <li class="list-group-item text-muted">
-                                No tasks
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
-
+        <ul id="task-list" class="list-group mt-3"></ul>
     </div>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+
+let chart = null;
+
+/* Initialize chart */
+function initChart(labels, values) {
+
     const ctx = document.getElementById("taskChart");
-    if (!ctx) return;
 
-    const todo = Number("{{ stats.todo|default:0 }}");
-    const doing = Number("{{ stats.doing|default:0 }}");
-    const done = Number("{{ stats.done|default:0 }}");
-
-    new Chart(ctx, {
+    chart = new Chart(ctx, {
         type: "doughnut",
         data: {
-            labels: ["Todo", "Doing", "Done"],
+            labels: labels,
             datasets: [{
-                data: [todo, doing, done]
+                data: values
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: true
+
+            /* 🔥 CHANGED: no redirect anymore */
+            onClick: function(e, elements) {
+
+                if (!elements.length) return;
+
+                const index = elements[0].index;
+                const label = chart.data.labels[index].toLowerCase();
+
+                loadFilteredTasks(label);
+            }
         }
     });
+}
+
+
+/* Load chart */
+function loadChart(type) {
+
+    fetch(`/chart/${type}/`)
+    .then(res => res.json())
+    .then(data => {
+
+        if (chart) {
+            chart.data.labels = data.labels;
+            chart.data.datasets[0].data = data.values;
+            chart.update();
+        } else {
+            initChart(data.labels, data.values);
+        }
+
+        const total = data.values.reduce((a, b) => a + b, 0);
+        document.getElementById("total-count").innerText = total;
+
+        if (type === "status") {
+
+            document.getElementById("done-count").innerText = data.values[2] || 0;
+
+            const percent = total ? Math.round((data.values[2] / total) * 100) : 0;
+
+            document.getElementById("insight-text").innerText =
+                `You have completed ${percent}% of your tasks`;
+        }
+
+        if (type === "overdue") {
+
+            document.getElementById("overdue-count").innerText = data.values[0] || 0;
+
+            document.getElementById("insight-text").innerText =
+                `${data.values[0]} tasks are overdue`;
+        }
+
+        if (type === "priority") {
+
+            document.getElementById("insight-text").innerText =
+                "Task distribution by priority";
+        }
+
+    });
+}
+
+
+/* 🔥 NEW FUNCTION */
+function loadFilteredTasks(type) {
+
+    const list = document.getElementById("task-list");
+    const loading = document.getElementById("loading");
+
+    list.innerHTML = "";
+    loading.style.display = "block";
+
+    fetch(`/tasks/api/?type=${type}`)
+    .then(res => res.json())
+    .then(data => {
+
+        loading.style.display = "none";
+
+        if (!data.tasks.length) {
+            list.innerHTML = `
+                <li class="list-group-item text-muted text-center">
+                    No tasks found
+                </li>
+            `;
+            return;
+        }
+
+        data.tasks.forEach(task => {
+
+            const li = document.createElement("li");
+
+            li.className = "list-group-item d-flex justify-content-between align-items-center";
+
+            li.innerHTML = `
+                <span>${task.title}</span>
+                <span class="badge bg-${getColor(task.status)}">
+                    ${task.status}
+                </span>
+            `;
+
+            list.appendChild(li);
+        });
+
+    });
+}
+
+
+/* Status color */
+function getColor(status) {
+
+    if (status === "todo") return "secondary";
+    if (status === "doing") return "warning";
+    if (status === "done") return "success";
+
+    return "dark";
+}
+
+
+/* Button switch */
+document.querySelectorAll('.chart-btn').forEach(btn => {
+
+    btn.addEventListener('click', function() {
+
+        document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove("active"));
+        this.classList.add("active");
+
+        loadChart(this.dataset.type);
+    });
+
 });
+
+
+/* Initial load */
+document.addEventListener("DOMContentLoaded", function () {
+    loadChart("status");
+});
+
 </script>
 
 {% endblock %}

@@ -6,12 +6,12 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Your Dashboard</h2>
-        <a href="{% url 'create_project' %}" class="btn btn-primary">
+        <a href=" 'create_project' %}" class="btn btn-primary">
             Create Project
-        </a>
+        </a >
     </div>
 
-    <!-- 🔍 AJAX SEARCH -->
+    <!-- Search -->
     <div class="mb-4">
         <div class="input-group">
             <input type="text"
@@ -22,7 +22,7 @@
         </div>
     </div>
 
-    <!-- 🔥 Quick Access -->
+    <!-- Quick Access -->
     <div class="mb-4">
         <h4>🔥 Quick Access</h4>
 
@@ -33,11 +33,11 @@
 
                     <a href="{% url 'task_detail' task.id %}" class="text-decoration-none">
                         {{ task.title }}
-                    </a>
+                    </a >
 
                     <div class="d-flex align-items-center gap-2">
 
-                        <!-- STATUS -->
+                        <!-- Task status badge -->
                         <span class="badge
                             {% if task.status == 'todo' %}bg-secondary
                             {% elif task.status == 'doing' %}bg-warning text-dark
@@ -47,7 +47,7 @@
                             {{ task.status|title }}
                         </span>
 
-                        <!-- ⭐ QUICK TOGGLE -->
+                        <!-- Toggle quick access -->
                         <button class="btn btn-sm btn-outline-primary quick-btn"
                                 data-id="{{ task.id }}">
                             ★
@@ -66,7 +66,7 @@
         </ul>
     </div>
 
-    <!-- 📌 Pinned Projects -->
+    <!-- Pinned Projects -->
     <div class="mb-4">
         <h4>📌 Pinned Projects</h4>
 
@@ -77,8 +77,9 @@
 
                     <a href="{% url 'project_detail' project.id %}" class="text-decoration-none">
                         {{ project.title }}
-                    </a>
+                    </a >
 
+                    <!-- Unpin button -->
                     <button class="btn btn-sm btn-outline-secondary pin-btn"
                             data-id="{{ project.id }}">
                         Unpin
@@ -95,7 +96,7 @@
         </ul>
     </div>
 
-    <!-- 📁 All Projects -->
+    <!-- All Projects -->
     <div>
         <h4>📁 All Projects</h4>
 
@@ -106,9 +107,10 @@
 
                     <a href="{% url 'project_detail' project.id %}" class="text-decoration-none">
                         {{ project.title }}
-                    </a>
+                    </a >
 
-                    <button class="btn btn-sm btn-outline-primary pin-btn"
+                    <!-- Pin toggle button -->
+                    <button class="btn btn-sm {% if project.is_pinned %}btn-outline-secondary{% else %}btn-outline-primary{% endif %} pin-btn"
                             data-id="{{ project.id }}">
                         {% if project.is_pinned %}
                             Pinned
@@ -130,22 +132,30 @@
 
 </div>
 
-
 <!-- ================= AJAX SCRIPT ================= -->
 <script>
 
-// ---------------- CSRF ----------------
+/* Get CSRF token from cookies */
 function getCSRFToken() {
-    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const name = "csrftoken=";
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const cookies = decodedCookie.split(";");
+
+    for (let i = 0; i < cookies.length; i++) {
+        let c = cookies[i].trim();
+        if (c.indexOf(name) === 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
 }
 
-
-// ---------------- SEARCH AJAX ----------------
+/* Search projects via AJAX */
 document.getElementById("search-input").addEventListener("input", function() {
 
     const query = this.value;
 
-    fetch(`/search/?q=${query}`)
+    fetch(`/search/?q=${encodeURIComponent(query)}`)
     .then(response => response.json())
     .then(data => {
 
@@ -168,7 +178,7 @@ document.getElementById("search-input").addEventListener("input", function() {
             li.className = "list-group-item d-flex justify-content-between align-items-center";
 
             li.innerHTML = `
-                <a href="/project/${p.id}/">${p.title}</a>
+                <a href="/project/${p.id}/" class="text-decoration-none">${p.title}</a >
                 <button class="btn btn-sm btn-outline-primary pin-btn" data-id="${p.id}">
                     Pin
                 </button>
@@ -182,14 +192,12 @@ document.getElementById("search-input").addEventListener("input", function() {
 
 });
 
-
-// ---------------- PIN AJAX ----------------
+/* Toggle pin project */
 document.addEventListener("click", function(e) {
 
     if (e.target.classList.contains("pin-btn")) {
 
-        const btn = e.target;
-        const projectId = btn.dataset.id;
+        const projectId = e.target.dataset.id;
 
         fetch(`/project/${projectId}/pin/`, {
             method: "POST",
@@ -197,27 +205,25 @@ document.addEventListener("click", function(e) {
                 'X-CSRFToken': getCSRFToken()
             }
         })
-        .then(res => res.json())
-        .then(data => {
-
-            if (data.pinned) {
-                btn.innerText = "Pinned";
-                btn.classList.remove("btn-outline-primary");
-                btn.classList.add("btn-outline-secondary");
-            } else {
-                btn.innerText = "Pin";
-                btn.classList.remove("btn-outline-secondary");
-                btn.classList.add("btn-outline-primary");
+        .then(res => {
+            if (!res.ok) {
+                throw new Error("Request failed");
             }
-
+            return res.json();
+        })
+        .then(() => {
+            /* Reload page to update pinned section */
+            location.reload();
+        })
+        .catch(() => {
+            alert("Pin action failed");
         });
 
     }
 
 });
 
-
-// ---------------- QUICK ACCESS AJAX ----------------
+/* Toggle quick access */
 document.addEventListener("click", function(e) {
 
     if (e.target.classList.contains("quick-btn")) {
@@ -234,9 +240,19 @@ document.addEventListener("click", function(e) {
         .then(res => res.json())
         .then(data => {
 
+            /* Remove task if unstarred */
             if (!data.quick) {
-                // 🔥 remove from list instantly
                 btn.closest("li").remove();
+
+                const quickList = document.getElementById("quick-list");
+
+                if (quickList.children.length === 0) {
+                    quickList.innerHTML = `
+                        <li class="list-group-item text-muted">
+                            No quick access tasks
+                        </li>
+                    `;
+                }
             }
 
         });
