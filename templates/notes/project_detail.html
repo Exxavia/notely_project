@@ -2,12 +2,28 @@
 
 {% block content %}
 <div class="container mt-4">
-
-    <!-- Header -->
+    <!-- Cover Image and Header -->
+    {% if project.cover_image %}
+        <div class="card shadow border-0 mb-4 overflow-hidden">
+            <div style="position: relative;">
+                <img src="{{ project.cover_image.url }}"
+                    class="w-100"
+                    style="height: 250px; object-fit: cover;">
+                <div style="position: absolute; bottom: 0; left: 0; width: 100%; padding: 20px; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); color: white;">
+                    <h3 class="mb-1"> {{ project.title}} </h3>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Header -->
+        <div class="mb-4">
+            <h3>{{ project.title }}</h3>
+        </div>
+    {% endif %}
     <div class="mb-4">
-        <h2>{{ project.title }}</h2>
         <p class="text-muted">{{ project.description }}</p>
     </div>
+    
 
     <!-- Add Task -->
     <form method="POST" action="{% url 'add_task' project.id %}" class="row g-2 mb-4">

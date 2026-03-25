@@ -1,9 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from .models import Project, Task
+from .forms import ProjectForm
 
 
 # ---------------- HOME (SEARCH + QUICK + OVERDUE) ----------------
@@ -61,19 +63,21 @@ def search_projects(request):
 @login_required
 def create_project(request):
     if request.method == 'POST':
-        title = request.POST.get('title', '').strip()
-        description = request.POST.get('description', '')
+        project_form = ProjectForm(request.POST, request.FILES)
+        if project_form.is_valid():
 
-        if title:
-            Project.objects.create(
-                owner=request.user,
-                title=title,
-                description=description
-            )
+            project = project_form.save(commit=False)
+            project.owner = request.user
+            project.save()
 
-        return redirect('home')
+            messages.success(request, f'Project {project.title} has been created successfully!')
+            return redirect('home')
+        else:
+            messages.error(request, "Please fix the errors below.")
+    else:
+        project_form = ProjectForm()
 
-    return render(request, 'notes/create_project.html')
+    return render(request, 'notes/create_project.html', {'project_form' : project_form})
 
 
 # ---------------- PROJECT DETAIL (DB SORT, NOT PYTHON SORT) ----------------
