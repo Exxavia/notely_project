@@ -9,20 +9,31 @@ from .models import Project, Task
 # ---------------- HOME (SEARCH + QUICK + OVERDUE) ----------------
 @login_required
 def home(request):
+    # Get search query
     query = request.GET.get('q', '').strip()
 
+    # Get user projects
     projects = Project.objects.filter(owner=request.user)
 
+    # Apply search filter
     if query:
         projects = projects.filter(title__icontains=query)
 
     projects = projects.order_by('-id')
 
+    # Get quick access tasks
     quick_tasks = Task.objects.filter(
         project__owner=request.user,
         is_quick_access=True
     )
 
+    # FIX: Get pinned projects
+    pinned_projects = Project.objects.filter(
+        owner=request.user,
+        is_pinned=True
+    ).order_by('-id')
+
+    # Get overdue tasks
     today = timezone.now().date()
 
     overdue_tasks = Task.objects.filter(
@@ -31,10 +42,12 @@ def home(request):
         status__in=['todo', 'doing']
     ).order_by('due_date')
 
+    # Render template with all data
     return render(request, 'notes/home.html', {
         'projects': projects,
         'query': query,
         'quick_tasks': quick_tasks,
+        'pinned_projects': pinned_projects,  # required for pinned UI
         'overdue_tasks': overdue_tasks
     })
 
@@ -234,3 +247,106 @@ def task_stats(request):
         "doing": tasks.filter(status='doing').count(),
         "done": tasks.filter(status='done').count(),
     })
+
+# ---------------- CHART DATA (TOP LEVEL DASHBOARD) ----------------
+@login_required
+def chart_data(request, type):
+
+    tasks = Task.objects.filter(project__owner=request.user)
+
+    if type == "status":
+        data = {
+            "labels": ["Todo", "Doing", "Done"],
+            "values": [
+                tasks.filter(status="todo").count(),
+                tasks.filter(status="doing").count(),
+                tasks.filter(status="done").count(),
+            ]
+        }
+
+    elif type == "priority":
+        data = {
+            "labels": ["Low", "Medium", "High"],
+            "values": [
+                tasks.filter(priority="low").count(),
+                tasks.filter(priority="medium").count(),
+                tasks.filter(priority="high").count(),
+            ]
+        }
+
+    elif type == "overdue":
+        overdue = tasks.filter(
+            due_date__lt=timezone.now().date(),
+            status__in=["todo", "doing"]
+        ).count()
+
+        data = {
+            "labels": ["Overdue", "On Time"],
+            "values": [overdue, tasks.count() - overdue]
+        }
+
+    else:
+        data = {"labels": [], "values": []}
+
+    return JsonResponse(data)
+
+# ---------------- FILTER TASKS (FOR CHART CLICK) ----------------
+@login_required
+def filter_tasks(request):
+
+    filter_type = request.GET.get("type")
+
+    tasks = Task.objects.filter(project__owner=request.user)
+
+    if filter_type == "todo":
+        tasks = tasks.filter(status="todo")
+
+    elif filter_type == "doing":
+        tasks = tasks.filter(status="doing")
+
+    elif filter_type == "done":
+        tasks = tasks.filter(status="done")
+
+    elif filter_type == "overdue":
+        tasks = tasks.filter(
+            due_date__lt=timezone.now().date(),
+            status__in=["todo", "doing"]
+        )
+
+    return render(request, "notes/task_filter.html", {
+        "tasks": tasks,
+        "filter_type": filter_type
+    })
+
+
+@login_required
+def filter_tasks_api(request):
+    task_type = request.GET.get("type")
+
+    tasks = Task.objects.filter(project__owner=request.user)
+
+    if task_type == "todo":
+        tasks = tasks.filter(status="todo")
+
+    elif task_type == "doing":
+        tasks = tasks.filter(status="doing")
+
+    elif task_type == "done":
+        tasks = tasks.filter(status="done")
+
+    elif task_type == "overdue":
+        tasks = tasks.filter(
+            due_date__lt=timezone.now(),
+            status__in=["todo", "doing"]
+        )
+
+    data = []
+
+    for t in tasks:
+        data.append({
+            "id": t.id,
+            "title": t.title,
+            "status": t.status
+        })
+
+    return JsonResponse({"tasks": data})
