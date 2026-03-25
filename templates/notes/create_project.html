@@ -1,21 +1,30 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="row justify-content-center mt-5">
 
-    <h2>Create Project</h2>
+    <div class="col-md-5">
+        <div class="card shadow border-0">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-4">Create Project</h3>
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="Enter project title" required>
+                    </div>
 
-    <form method="POST">
-        {% csrf_token %}
-        <div class="mb-3">
-        <label class="form-label">Title</label>
-        <input type="text" name="title" placeholder="Project title" required>
-        <br><br>
-        <label class="form-label">Description</label>
-        <textarea name="description" placeholder="Description"></textarea>
-        <br><br>
-        <button type="submit" class="btn btn-success">Create</button>
-    </form>
+                    <div class="mb-3"></div>
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="4" placeholder="Enter project description"></textarea>
+                    </div>
 
+                    <button type="submit" class="btn btn-primary w-100">
+                        Create Project
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
