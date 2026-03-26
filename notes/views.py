@@ -1,3 +1,7 @@
+import urllib.request
+import urllib.parse
+import json
+from django.core.files.base import ContentFile
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -6,6 +10,29 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from .models import Project, Task
 from .forms import ProjectForm
+
+
+
+def fetch_unsplash_cover(query):
+    # Note: Replace this with your actual Unsplash Access Key!
+    client_id = '7CYBwiGcKsKAaY6BI2HxnKyviG2wlRaftXhBTB85oI4' 
+    
+    safe_query = urllib.parse.quote(query)
+    url = f"https://api.unsplash.com/search/photos?page=1&query={safe_query}&client_id={client_id}"
+    
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'NotelyApp/1.0'})
+        response = urllib.request.urlopen(req)
+        data = json.loads(response.read().decode('utf-8'))
+        
+        if data['results']:
+            img_url = data['results'][0]['urls']['regular']
+            img_data = urllib.request.urlopen(img_url).read()
+            return img_data
+    except Exception as e:
+        print(f"Unsplash API Error: {e}")
+        
+    return None
 
 
 # ---------------- HOME (SEARCH + QUICK + OVERDUE) ----------------
@@ -72,7 +99,7 @@ def search_projects(request):
     return JsonResponse({"projects": data})
 
 
-# ---------------- CREATE PROJECT ----------------
+# ---------------- CREATE PROJECT (OPTIMIZED WITH API) ----------------
 @login_required
 def create_project(request):
     if request.method == 'POST':
@@ -81,6 +108,19 @@ def create_project(request):
 
             project = project_form.save(commit=False)
             project.owner = request.user
+            
+            # --- MOHAMED'S API OPTIMIZATION ---
+            # Why: If the user didn't upload a cover image, we fetch one automatically
+            # based on the project title to make the UI look professional.
+            if not project.cover_image:
+                image_data = fetch_unsplash_cover(project.title)
+                if image_data:
+                    # We create a safe filename based on the project title
+                    file_name = f"{project.title.replace(' ', '_')}_cover.jpg"
+                    # We use ContentFile to wrap the raw bytes into a Django-friendly file object
+                    project.cover_image.save(file_name, ContentFile(image_data), save=False)
+            # ----------------------------------
+
             project.save()
 
             messages.success(request, f'Project {project.title} has been created successfully!')
@@ -91,7 +131,6 @@ def create_project(request):
         project_form = ProjectForm()
 
     return render(request, 'notes/create_project.html', {'project_form' : project_form})
-
 
 # ---------------- PROJECT DETAIL (DB SORT, NOT PYTHON SORT) ----------------
 @login_required
