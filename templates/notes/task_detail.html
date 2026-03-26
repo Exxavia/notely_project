@@ -19,10 +19,29 @@
     </p>
     
     <!-- Description -->
-    <p class="text-muted"></p>
-        {{ task.description }}
-    </p>
-
+    <div class="mb-3">
+        <!-- Display Mode -->
+        <div id="description-display">
+            <p class="form-control bg-light">
+                {{ task.description|default:"No description provided." }}
+            </p>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleEdit()">
+                Edit Description
+            </button>
+        </div>
+        
+        <!-- Edit Mode -->
+        <div id="description-edit" style="display: none;">
+            <form method="POST" action="{% url 'update_task_description' task.id %}">
+                {% csrf_token %}
+                <textarea name="description" class="form-control" rows="2">{{ task.description }}</textarea>
+                <div class="mt-2">
+                    <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="toggleEdit()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <!-- Status Buttons -->
     <div class="mb-3">
         <button class="status-btn btn btn-sm btn-outline-secondary" data-id="{{ task.id }}" data-status="todo">Todo</button>
@@ -65,6 +84,18 @@
 
 function getCSRFToken() {
     return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+function toggleEdit() {
+    const display = document.getElementById('description-display');
+    const edit = document.getElementById('description-edit');
+    if (display.style.display === 'none') {
+        display.style.display = 'block';
+        edit.style.display = 'none';
+    } else {
+        display.style.display = 'none';
+        edit.style.display = 'block';
+    }
 }
 
 // ✅ Task Status AJAX

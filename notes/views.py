@@ -150,6 +150,16 @@ def task_detail(request, task_id):
         'subtasks': subtasks
     })
 
+# ---------------- UPDATE TASK DESCRIPTION ----------------
+@login_required
+def update_task_description(request, task_id):
+    task = get_object_or_404(Task, id=task_id, project__owner=request.user)
+    if request.method == 'POST':
+        description = request.POST.get('description','')
+        task.description = description
+        task.save()
+    return redirect('task_detail',task_id=task_id)
+
 
 # ---------------- UPDATE STATUS (AJAX) ----------------
 @login_required
@@ -350,7 +360,8 @@ def filter_tasks_api(request):
         data.append({
             "id": t.id,
             "title": t.title,
-            "status": t.status
+            "status": t.status,
+            "project": t.project.title
         })
 
     return JsonResponse({"tasks": data})

@@ -15,6 +15,7 @@ urlpatterns = [
     # ---------------- TASK ----------------
     path('task/<int:task_id>/', views.task_detail, name='task_detail'),
     path('task/<int:task_id>/delete/', views.delete_task, name='delete_task'),
+    path('task/<int:task_id>/update_task_description/', views.update_task_description, name='update_task_description'),
     path('task/<int:task_id>/quick/', views.toggle_quick_access, name='toggle_quick_access'),
 
     #  AJAX STATUS

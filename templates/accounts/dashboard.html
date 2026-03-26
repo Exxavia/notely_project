@@ -45,27 +45,35 @@ Dashboard
         <button class="btn btn-outline-danger chart-btn" data-type="overdue">Overdue</button>
     </div>
 
-    <!-- Chart -->
-    <div class="card shadow-sm p-4">
-        <canvas id="taskChart"></canvas>
-    </div>
-
     <!-- Insight -->
     <div class="text-center mt-3">
         <p id="insight-text" class="fw-bold text-primary"></p >
     </div>
 
-    <!-- 🔥 NEW: Filtered Tasks -->
-    <div class="mt-5">
-        <h5 class="text-center">Filtered Tasks</h5>
+    <!-- Chart -->
+    
 
-        <div id="loading" class="text-center text-muted" style="display:none;">
-            Loading...
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm p-4">
+                <div style="position: relative; height: 350px;">
+                    <canvas id="taskChart"></canvas>
+                </div>
+            </div>
         </div>
 
-        <ul id="task-list" class="list-group mt-3"></ul>
-    </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm p-4">
+                <h5 class="text-center">Filtered Tasks</h5>
+                <div id="loading" class="text-center text-muted" style="display:none;">
+                    Loading...
+                </div>
+                <ul id="task-list" class="list-group mt-3" style="max-height: 300px; overflow-y: auto;"></ul>
+                    
+            </div>
+        </div>
 
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -181,7 +189,11 @@ function loadFilteredTasks(type) {
             li.className = "list-group-item d-flex justify-content-between align-items-center";
 
             li.innerHTML = `
-                <span>${task.title}</span>
+                <a href="/task/${task.id}/"class="text-decoration-none flex-grow-1">
+                    <span>${task.title}</span>
+                    <br>
+                    <small class="text-muted">Project: ${task.project}</small>
+                </a>
                 <span class="badge bg-${getColor(task.status)}">
                     ${task.status}
                 </span>
