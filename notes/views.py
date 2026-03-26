@@ -222,6 +222,12 @@ def add_subtask(request, task_id):
     title = request.POST.get("title", "").strip()
 
     if title:
+
+        if parent_task.status == 'done':
+            return JsonResponse({
+                "error": f"Cannot add subtask. Task status is '{parent_task.status}'. Only 'todo' tasks can have subtasks."
+            }, status=400)
+        
         sub = Task.objects.create(
             project=parent_task.project,
             title=title,

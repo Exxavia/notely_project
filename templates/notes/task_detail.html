@@ -13,7 +13,11 @@
     <!-- Status -->
     <p>
         <strong>Status:</strong>
-        <span id="status-badge" class="badge bg-secondary">
+        <span id="status-badge" class="badge 
+            {% if task.status == 'todo' %}bg-secondary
+            {% elif task.status == 'doing' %}bg-warning
+            {% else %}bg-success
+            {% endif %}">
             {{ task.status|title }}
         </span>
     </p>
@@ -64,6 +68,21 @@
         {% csrf_token %}
         <button class="btn btn-danger btn-sm">Delete</button>
     </form>
+
+    <div class="mb-3 mt-2">
+        {% if task.status == 'todo' %}
+            <button onclick="addSubtask({{ task.id }})" class="btn btn-sm btn-outline-success">
+                + Add Subtask
+            </button>
+        {% else %}
+            <button class="btn btn-sm btn-outline-secondary" disabled 
+                    title="Subtasks can only be added to Todo tasks">
+                + Add Subtask (Only for Todo tasks)
+            </button>
+        {% endif %}
+        
+        <div id="subtask-error" class="alert alert-danger mt-2" style="display: none;"></div>
+    </div>
 
     <!-- Subtasks -->
     <ul id="subtask-list" class="list-group mt-4">
@@ -154,6 +173,53 @@ document.addEventListener('click', function(e) {
     }
 
 });
+
+// Add Subtask Function
+function addSubtask(taskId) {
+    const title = prompt("Enter subtask title:");
+    if (!title) return;
+    
+    const errorDiv = document.getElementById('subtask-error');
+    if (errorDiv) {
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+    }
+    
+    console.log("Adding subtask for task ID:", taskId);
+    console.log("Title:", title);
+    
+    fetch(`/task/${taskId}/add-subtask/`, {
+        method: "POST",
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `title=${encodeURIComponent(title)}`
+    })
+    .then(response => {
+        console.log("Response status:", response.status);
+        return response.json().then(data => {
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to add subtask');
+            }
+            return data;
+        });
+    })
+    .then(data => {
+        console.log("Success:", data);
+        // Reload to show the new subtask
+        location.reload();
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        if (errorDiv) {
+            errorDiv.textContent = error.message;
+            errorDiv.style.display = 'block';
+        } else {
+            alert(error.message);
+        }
+    });
+}
 
 </script>
 
