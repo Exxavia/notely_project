@@ -71,7 +71,7 @@
 
     <div class="mb-3 mt-2">
         {% if task.status == 'todo' %}
-            <button onclick="addSubtask({{ task.id }})" class="btn btn-sm btn-outline-success">
+            <button data-id="{{ task.id }}" class="btn btn-sm btn-outline-success add-subtask-btn"> 
                 + Add Subtask
             </button>
         {% else %}

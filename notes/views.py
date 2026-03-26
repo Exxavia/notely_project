@@ -1,3 +1,4 @@
+import os
 import urllib.request
 import urllib.parse
 import json
@@ -13,27 +14,45 @@ from .forms import ProjectForm
 
 
 
-def fetch_unsplash_cover(query):
-    # Note: Replace this with your actual Unsplash Access Key!
-    client_id = '7CYBwiGcKsKAaY6BI2HxnKyviG2wlRaftXhBTB85oI4' 
-    
-    safe_query = urllib.parse.quote(query)
-    url = f"https://api.unsplash.com/search/photos?page=1&query={safe_query}&client_id={client_id}"
-    
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'NotelyApp/1.0'})
-        response = urllib.request.urlopen(req)
-        data = json.loads(response.read().decode('utf-8'))
-        
-        if data['results']:
-            img_url = data['results'][0]['urls']['regular']
-            img_data = urllib.request.urlopen(img_url).read()
-            return img_data
-    except Exception as e:
-        print(f"Unsplash API Error: {e}")
-        
-    return None
+import urllib.request
+import urllib.parse
+import json
+import os
 
+def fetch_unsplash_cover(query):
+    client_id = os.environ.get('7CYBwiGcKsKAaY6BI2HxnKyviG2wlRaftXhBTB85oI4')
+    if not client_id:
+        print("API Key missing in .env!")
+        return None
+
+    def get_data(search_term):
+        safe_query = urllib.parse.quote(search_term)
+        url = f"https://api.unsplash.com/search/photos?page=1&query={safe_query}&client_id={client_id}"
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'NotelyApp/1.0'})
+            with urllib.request.urlopen(req) as response:
+                return json.loads(response.read().decode('utf-8'))
+        except Exception as e:
+            print(f"Request Error for '{search_term}': {e}")
+            return None
+
+    # 1. Try the specific title (e.g., "McKinsey")
+    data = get_data(query)
+    
+    # 2. If no results, try a generic backup (e.g., "business abstract")
+    if not data or not data.get('results'):
+        print(f"No results for '{query}', trying fallback...")
+        data = get_data("business abstract")
+
+    # 3. If we finally have data, grab the image
+    if data and data.get('results'):
+        try:
+            img_url = data['results'][0]['urls']['regular']
+            return urllib.request.urlopen(img_url).read()
+        except Exception as e:
+            print(f"Image Download Error: {e}")
+
+    return None
 
 # ---------------- HOME (SEARCH + QUICK + OVERDUE) ----------------
 @login_required
@@ -42,7 +61,7 @@ def home(request):
     query = request.GET.get('q', '').strip()
 
     # Get user projects
-    projects = Project.objects.filter(owner=request.user)
+    projects = Project.objects.filter(owner=request.user).select_related('owner')
 
     # Apply search filter
     if query:
