@@ -11,6 +11,7 @@ from django.utils.encoding import force_bytes
 from django.utils.timezone import now
 
 from .forms import UserRegisterForm, UserProfileForm
+from .models import UserProfile
 from .tokens import account_activation_token
 
 
@@ -132,7 +133,7 @@ def user_logout(request):
 # --------------------------------------------------
 @login_required
 def dashboard(request):
-    profile = request.user.userprofile
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
 
     from notes.models import Project, Task
 
