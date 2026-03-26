@@ -354,3 +354,15 @@ def filter_tasks_api(request):
         })
 
     return JsonResponse({"tasks": data})
+
+# Delete a project owned by the current user
+@login_required
+def delete_project(request, project_id):
+    # Get project that belongs to current user only (FIX: use owner instead of user)
+    project = get_object_or_404(Project, id=project_id, owner=request.user)
+
+    # Delete project from database
+    project.delete()
+
+    # Redirect back to home/dashboard
+    return redirect('home')
