@@ -1,0 +1,12 @@
+/* -------------------------------------------------------
+   Editor.js layout overrides
+   Constrains editor content width for readability
+------------------------------------------------------- */
+.ce-block__content,
+.ce-toolbar__content {
+    max-width: 900px;
+}
+
+.codex-editor--empty .ce-block:first-child .ce-paragraph:before {
+    color: #adb5bd;
+}

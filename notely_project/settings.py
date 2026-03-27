@@ -136,6 +136,11 @@ USE_TZ = True
 # --------------------------------------------------
 STATIC_URL = '/static/'
 
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # --------------------------------------------------
 # Media files
@@ -148,9 +153,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # --------------------------------------------------
 # Authentication redirects
 # --------------------------------------------------
-LOGIN_REDIRECT_URL = '/accounts/dashboard/'
+LOGIN_REDIRECT_URL = '/' 
 LOGOUT_REDIRECT_URL = '/accounts/login/'
-
 
 # --------------------------------------------------
 # Email configuration

@@ -10,6 +10,17 @@ from django.contrib.auth.models import User
 from accounts.models import UserProfile
 from notes.models import Project, Task
 
+def get_json_description(text):
+        import json
+        return json.dumps({
+            "blocks": [
+                {
+                    "type": "paragraph",
+                    "data": {"text": text}
+                }
+            ]
+        })
+
 def construct_user_data(): 
     first_names = ['Max','Alice','Kat','Pedro','Daniel']
     last_names = ['Smith','Radov','Lewis','Loo','Thain']
@@ -22,8 +33,6 @@ def construct_user_data():
             'is_superuser': False
     }
 
-def create_user(): 
-    pass
 
 def get_random_avatar():
     avatar_dir = 'media/avatars/'
@@ -40,17 +49,6 @@ def get_random_cover_image():
         if cover_images:
             return os.path.join(cover_image_dir, random.choice(cover_images)) 
     return None
-
-def add_projects(title, description, cover_image):
-    p = Project.objects.get_or_create(title=title)
-    p.save()
-    return p
-    
-
-def add_tasks(title, description = '', due = '', priority = '', sub = '', is_quick_access = False):
-    t = Task.objects.get_or_create(title=title)
-    t.save()
-    return t
 
 def populate(): 
     # Create: Sample users, projects and tasks for testing purposes
@@ -85,7 +83,9 @@ def populate():
             profile.save() 
 
         users.append(user)
-        print(f'Created {len(users)} users')
+
+    print(f'Created {len(users)} users')
+        
     
     print("\nCreate Projects\n")
     projects = [] 
@@ -108,7 +108,7 @@ def populate():
                 title=title,
                 owner=user,
                 defaults={
-                    'description': description,
+                    'description': get_json_description(description),
                     'is_pinned': is_pinned,
                 }
             )
@@ -157,7 +157,7 @@ def populate():
                 title=task_data['title'],
                 project=project,
                 defaults={
-                    'description': task_data['desc'],
+                    'description': get_json_description(task_data['desc']),
                     'status': status,
                     'priority': task_data['priority'],
                     'due_date': due_date,
@@ -171,7 +171,7 @@ def populate():
 
     print("\nCreate Sub-Tasks\n")
     subtask_titles = ['Review','Checklist','Resources','Schedule','Materials']
-    for task in tasks[:8]:
+    for task in random.sample(tasks, min(8, len(tasks))):
         num_subtasks = random.randint(1, 2)
         for sub_title in random.sample(subtask_titles, num_subtasks):
             subtask, created = Task.objects.get_or_create(
@@ -179,7 +179,7 @@ def populate():
                 project=task.project,
                 parent=task,
                 defaults={
-                    'description': f'Subtask for: {task.title}',
+                    'description': get_json_description(f'Subtask for: {task.title}'),
                     'status': random.choice(['todo', 'doing']),
                     'priority': task.priority,
                 }
