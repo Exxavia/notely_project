@@ -22,14 +22,11 @@ from django.contrib.auth.tokens import default_token_generator
 # Register
 # --------------------------------------------------
 def register(request):
-
     if request.method == "POST":
-
         user_form = UserRegisterForm(request.POST)
         profile_form = UserProfileForm(request.POST, request.FILES)
 
         if user_form.is_valid() and profile_form.is_valid():
-
             user = user_form.save(commit=False)
 
             if User.objects.filter(email=user.email).exists():
@@ -37,38 +34,19 @@ def register(request):
                 return redirect("register")
 
             user.set_password(user_form.cleaned_data["password"])
-            user.is_active = False
+            user.is_active = True 
             user.save()
 
-            # profile created by signal
             profile = user.userprofile
             profile.avatar = profile_form.cleaned_data.get("avatar")
             profile.bio = profile_form.cleaned_data.get("bio")
             profile.save()
 
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = account_activation_token.make_token(user)
-
-            activation_link = request.build_absolute_uri(
-                reverse("activate", kwargs={"uidb64": uid, "token": token})
-            )
-
-            send_mail(
-                subject="Activate your Notely account",
-                message=f"Click the link below:\n\n{activation_link}",
-                from_email="admin@notely.com",
-                recipient_list=[user.email],
-                fail_silently=False
-            )
-
-            request.session['activation_link'] = activation_link
-            
-            messages.success(request, "Check terminal to activate account.")
+            messages.success(request, "Account created successfully! Please log in.")
             return redirect("login")
 
         else:
-            messages.error(request, "Registration failed.")
-
+            messages.error(request, "Registration failed. Please check the form.")
     else:
         user_form = UserRegisterForm()
         profile_form = UserProfileForm()
@@ -115,7 +93,7 @@ def user_login(request):
         if user:
             if user.is_active:
                 login(request, user)
-                return redirect("dashboard")
+                return redirect("home")
             else:
                 messages.error(request, "Account not activated.")
         else:
@@ -262,4 +240,4 @@ class CustomPasswordResetView(PasswordResetView):
         except User.DoesNotExist:
             pass
 
-        return super().form_valid(form)
+        return redirect("password_reset_done")

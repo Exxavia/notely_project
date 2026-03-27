@@ -25,14 +25,6 @@ Login
     {% endfor %}
 {% endif %}
 
-{% if request.session.activation_link %}
-<div class="alert alert-success mt-3">
-    <strong>Activate your account:</strong><br>
-    <a href=" ">
-        {{ request.session.activation_link }}
-    </a >
-</div>
-{% endif %}
 
 <form method="POST">
 
