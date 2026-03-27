@@ -1,37 +1,151 @@
-# Notely 🚀
-**A Smart Project Management Tool**
+# Notely — Task Management Web Application
 
-## 🌟 Overview
-Notely is a collaborative project management application designed to streamline task tracking and project organization. This branch focuses on enhancing the user experience through automated media integration and high-performance database indexing.
+A Django-based productivity application developed for the WAD2 Group Project at the University of Glasgow.
 
-## 🛠️ My Key Contributions & Advanced Features
+---
 
-### 1. Automated Media Integration (Unsplash API)
-- **Problem:** Users often leave project covers blank, leading to a visually unappealing dashboard.
-- **Solution:** Integrated the **Unsplash REST API**. If a user submits a project without an image, the backend triggers an automated fetch based on the project title.
-- **Technical Detail:** Utilized Python's `urllib` and `json` libraries for asynchronous-style processing within the `create_project` view, ensuring high-quality `ContentFile` objects are saved directly to the Django `media` root.
+## Team
 
-### 2. Database & Query Optimization
-- **N+1 Query Resolution:** Refactored the dashboard view using `.select_related('owner')`. This reduced database hits from $O(N)$ to $O(1)$ by utilizing a SQL `JOIN` instead of multiple individual queries.
-- **Data Integrity:** Implemented `get_or_create` logic for UserProfiles to prevent application crashes during edge-case authentications (e.g., admin-side user creation).
+| Name | Student Number |
+|---|---|
+| Mohamed ELhabib Ali | 3039352A|
+| Xavier Witting | 3005670W|
+| Liangyu Ji | 2960934J|
+| Ethan Lamb | 2960504L|
 
-### 3. Advanced Testing & Quality Assurance
-- **Unit Mocking:** Leveraged `unittest.mock.patch` to simulate API responses. This allows the test suite to run without an internet connection and prevents hitting API rate limits during CI/CD.
-- **Coverage:** Achieved comprehensive coverage across models, views, and AJAX endpoints.
+**Lab Group:** LB10 10D
 
-## 🏗️ Technical Architecture
+---
 
-The project follows the **Django MVT (Model-View-Template)** pattern:
-- **Models:** Defined relationships for Projects, Tasks, and UserProfiles.
-- **Views:** Handled complex logic for AJAX status updates and API fetching.
-- **Templates:** Utilized Bootstrap 5 and custom CSS for a responsive, mobile-first UI.
+## Overview
 
-## 🚀 Installation & Setup
-1. **Clone the repo:** `git clone <repo-url>`
-2. **Setup Venv:** `python -m venv venv` and `venv\Scripts\activate` (Windows)
-3. **Install Dependencies:** `pip install -r requirements.txt`
-4. **Environment Variables:** Create a `.env` file in the root directory:
-   ```env
-   SECRET_KEY=your_django_key
-   UNSPLASH_ACCESS_KEY=your_api_key
-   DEBUG=True
+Notely is a multi-user task management platform with project organisation, subtasks, rich-text notes, and real-time UI updates via AJAX. Users can only access their own projects and tasks, enforcing object-level data privacy across the application.
+
+---
+
+## Features
+
+- Full CRUD for Projects and Tasks
+- Subtask nesting with checkbox toggling
+- Task status management (Todo / Doing / Done) via AJAX
+- Quick Access pinning system via AJAX
+- Notion-style block editor (Editor.js) for structured task notes — supports Headers, Checklists, Code Blocks and Tables
+- User authentication with custom UserProfile (avatar, bio)
+- Project cover images
+- Responsive navigation with profile management
+- Object-level privacy — users can only view or edit content they own
+
+---
+
+## Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Exxavia/notely_project.git
+cd notely_project
+```
+
+### 2. Create and activate a virtual environment
+
+```bash
+python -m venv venv
+source venv/bin/activate       # Linux / Mac
+venv\Scripts\activate          # Windows
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Set up the database
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### 5. Run the population script
+
+```bash
+python populate_notely.py
+```
+
+This creates demo users, projects and tasks with pre-written Editor.js notes so the application is immediately usable without manual setup.
+
+### 6. Start the development server
+
+```bash
+python manage.py runserver
+```
+
+---
+
+## Demo Accounts
+
+| Username | Password | 
+|---|---|
+| PedroLewis_t | Pedro123 |
+| AliceLewis_t | Alice123 |
+| DanielLewis_t | Daniel123 |
+
+All accounts are created by the population script. Each user has their own isolated set of projects and tasks.
+
+---
+
+## Project Structure
+
+```
+notely_project/
+┣ 📂accounts/              # User profiles & authentication
+┣ 📂media/                 # User-uploaded files
+┃ ┣ 📂avatars/             # Profile pictures
+┃ ┗ 📂cover_images/        # Project cover images
+┣ 📂notely_project/        # Django settings & root URLs
+┣ 📂notes/                 # Core app — Task & Project models, views, AJAX endpoints
+┣ 📂static/                # Frontend assets
+┃ ┣ 📂css/
+┃ ┃ ┗ style.css            # Site-wide styles
+┃ ┗ 📂js/
+┃   ┗ task_detail.js       # AJAX logic & Editor.js initialisation
+┣ 📂templates/             # HTML templates (all inherit from base.html)
+┣ 📜.env                   # Secret keys — keep out of Git
+┣ 📜.gitignore             # Git ignore rules
+┣ 📜manage.py              # Django entry point
+┣ 📜populate_notely.py     # Demo data population script
+┣ 📜README.md              # Documentation
+┗ 📜requirements.txt       # Python dependencies
+```
+
+---
+
+## Technical Notes
+
+**Block-based notes (Editor.js)**
+Task descriptions are saved as structured JSON rather than raw HTML. This keeps data clean, prevents XSS vulnerabilities, and makes partial updates straightforward.
+
+**AJAX state management**
+Task status, subtask toggling and quick-access pinning all use `fetch()` requests so the page does not reload on every interaction. Django views return JSON responses consumed directly by `task_detail.js`.
+
+**Editor.js plugin stability**
+Multiple CDN-loaded Editor.js plugins can conflict at runtime due to variable naming collisions. Initialisation is wrapped in `typeof` safety checks and mapped through the `window` object to prevent one failed plugin from blocking the rest of the page.
+
+---
+
+## External Sources
+
+| Source | Usage |
+|---|---|
+| [Bootstrap 5](https://getbootstrap.com/) | Responsive CSS framework |
+| [Editor.js](https://editorjs.io/) | Block-based rich text editor |
+| [Bootstrap Icons](https://icons.getbootstrap.com/) | UI iconography |
+
+---
+
+## Deployment
+
+The application is deployed on PythonAnywhere and is accessible at:
+
+`https://notely.pythonanywhere.com` *(update with your actual URL)*
