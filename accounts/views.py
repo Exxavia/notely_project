@@ -13,6 +13,9 @@ from django.utils.timezone import now
 from .forms import UserRegisterForm, UserProfileForm
 from .tokens import account_activation_token
 
+from django.contrib.auth.views import PasswordResetView
+from django.contrib.auth.tokens import default_token_generator
+
 
 # --------------------------------------------------
 # Register
@@ -57,6 +60,8 @@ def register(request):
                 fail_silently=False
             )
 
+            request.session['activation_link'] = activation_link
+            
             messages.success(request, "Check terminal to activate account.")
             return redirect("login")
 
@@ -226,3 +231,34 @@ def profile(request):
         "user": request.user,
         "profile": request.user.userprofile
     })
+
+
+
+# --------------------------------------------------
+# Reset Password
+# --------------------------------------------------
+class CustomPasswordResetView(PasswordResetView):
+    template_name = "accounts/password_reset.html"
+
+    def form_valid(self, form):
+        email = form.cleaned_data["email"]
+
+        try:
+            user = User.objects.get(email=email)
+
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+
+            reset_link = self.request.build_absolute_uri(
+                reverse(
+                    "password_reset_confirm",
+                    kwargs={"uidb64": uid, "token": token}
+                )
+            )
+
+            self.request.session["reset_link"] = reset_link
+
+        except User.DoesNotExist:
+            pass
+
+        return super().form_valid(form)
