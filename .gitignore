@@ -16,3 +16,10 @@ venv/
 # OS files
 .DS_Store
 Thumbs.db
+
+.env
+__pycache__/
+*.pyc
+db.sqlite3
+media/
+venv/

@@ -124,24 +124,27 @@ def create_project(request):
     if request.method == 'POST':
         project_form = ProjectForm(request.POST, request.FILES)
         if project_form.is_valid():
-
             project = project_form.save(commit=False)
             project.owner = request.user
             
-            # --- MOHAMED'S API OPTIMIZATION ---
-            # Why: If the user didn't upload a cover image, we fetch one automatically
-            # based on the project title to make the UI look professional.
+            # --- MOHAMED'S API OPTIMIZATION (ROBUST VERSION) ---
             if not project.cover_image:
-                image_data = fetch_unsplash_cover(project.title)
-                if image_data:
-                    # We create a safe filename based on the project title
-                    file_name = f"{project.title.replace(' ', '_')}_cover.jpg"
-                    # We use ContentFile to wrap the raw bytes into a Django-friendly file object
-                    project.cover_image.save(file_name, ContentFile(image_data), save=False)
-            # ----------------------------------
+                try:
+                    image_data = fetch_unsplash_cover(project.title)
+                    if image_data:
+                        file_name = f"{project.title.replace(' ', '_')}_cover.jpg"
+                        # Save the actual image from Unsplash
+                        project.cover_image.save(file_name, ContentFile(image_data), save=False)
+                    else:
+                        # FALLBACK: If API finds nothing, we leave it blank 
+                        # so the HTML template can show the default placeholder.
+                        print(f"No match found for {project.title}, falling back to template default.")
+                except Exception as e:
+                    # Defensive Programming: Ensure an API error doesn't stop project creation
+                    print(f"Unsplash Integration Error: {e}")
+            # ----------------------------------------------------
 
             project.save()
-
             messages.success(request, f'Project {project.title} has been created successfully!')
             return redirect('home')
         else:
@@ -271,35 +274,31 @@ def toggle_pin_project(request, project_id):
     })
 
 
-# ---------------- ADD SUBTASK (AJAX) ----------------
+# ---------------- ADD SUBTASK (FORM INTEGRATION) ----------------
 @login_required
 @require_POST
 def add_subtask(request, task_id):
     parent_task = get_object_or_404(Task, id=task_id, project__owner=request.user)
-
+    
+    # Grab the text from the HTML form
     title = request.POST.get("title", "").strip()
 
     if title:
-
+        # Prevent adding subtasks to completed tasks
         if parent_task.status == 'done':
-            return JsonResponse({
-                "error": f"Cannot add subtask. Task status is '{parent_task.status}'. Only 'todo' tasks can have subtasks."
-            }, status=400)
-        
-        sub = Task.objects.create(
-            project=parent_task.project,
-            title=title,
-            parent=parent_task
-        )
+            messages.error(request, "Cannot add subtask. Only 'todo' tasks can have subtasks.")
+        else:
+            # Create the subtask using your self-referential Task model
+            Task.objects.create(
+                project=parent_task.project,
+                title=title,
+                parent=parent_task
+            )
+            messages.success(request, "Subtask added successfully!")
+    else:
+        messages.error(request, "Subtask title cannot be empty.")
 
-        return JsonResponse({
-            "id": sub.id,
-            "title": sub.title,
-            "status": sub.status
-        })
-
-    return JsonResponse({"error": "Invalid"}, status=400)
-
+    return redirect('task_detail', task_id=parent_task.id)
 
 # ---------------- TOGGLE SUBTASK (AJAX) ----------------
 @login_required

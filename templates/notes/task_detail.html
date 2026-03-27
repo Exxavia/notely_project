@@ -1,57 +1,44 @@
 {% extends 'base.html' %}
 
 {% block content %}
+
 <div class="container mt-4">
 
-    <h2>{{ task.title }}</h2>
-
-    <p class="text-muted">
-        Priority: {{ task.priority|title }}
-        {% if task.due_date %}| Due: {{ task.due_date }}{% endif %}
-    </p>
-
-    <!-- Status -->
-    <p>
-        <strong>Status:</strong>
-        <span id="status-badge" class="badge 
-            {% if task.status == 'todo' %}bg-secondary
-            {% elif task.status == 'doing' %}bg-warning
-            {% else %}bg-success
-            {% endif %}">
-            {{ task.status|title }}
-        </span>
-    </p>
-    
-    <!-- Description -->
-    <div class="mb-3">
-        <!-- Display Mode -->
-        <div id="description-display">
-            <p class="form-control bg-light">
-                {{ task.description|default:"No description provided." }}
-            </p>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleEdit()">
-                Edit Description
-            </button>
+    <div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h2 class="display-6 fw-bold mb-1 text-dark">{{ task.title }}</h2>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge {% if task.priority == 'high' %}bg-danger{% elif task.priority == 'medium' %}bg-warning text-dark{% else %}bg-info{% endif %} shadow-sm">
+                {{ task.priority|title }} Priority
+            </span>
+            {% if task.due_date %}
+                <span class="text-muted small"><i class="bi bi-calendar3"></i> Due: {{ task.due_date }}</span>
+            {% endif %}
         </div>
-        
-        <!-- Edit Mode -->
-        <div id="description-edit" style="display: none;">
-            <form method="POST" action="{% url 'update_task_description' task.id %}">
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group shadow-sm">
+            <button class="btn btn-light border quick-btn" data-id="{{ task.id }}">
+                {% if task.is_quick_access %}★ Pinned{% else %}☆ Pin{% endif %}
+            </button>
+            <form method="POST" action="{% url 'delete_task' task.id %}" class="d-inline" onsubmit="return confirm('Delete this task?');">
                 {% csrf_token %}
-                <textarea name="description" class="form-control" rows="2">{{ task.description }}</textarea>
-                <div class="mt-2">
-                    <button type="submit" class="btn btn-sm btn-primary">Save</button>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="toggleEdit()">Cancel</button>
-                </div>
+                <button class="btn btn-light border text-danger">Delete</button>
             </form>
         </div>
     </div>
-    <!-- Status Buttons -->
-    <div class="mb-3">
-        <button class="status-btn btn btn-sm btn-outline-secondary" data-id="{{ task.id }}" data-status="todo">Todo</button>
-        <button class="status-btn btn btn-sm btn-outline-warning" data-id="{{ task.id }}" data-status="doing">Doing</button>
-        <button class="status-btn btn btn-sm btn-outline-success" data-id="{{ task.id }}" data-status="done">Done</button>
+</div>
+
+<div class="card border-0 bg-light mb-4 shadow-sm rounded-3">
+    <div class="card-body d-flex align-items-center justify-content-between py-2 px-4">
+        <span class="small fw-bold text-uppercase text-muted letter-spacing-1">Current Progress</span>
+        <div class="btn-group btn-group-sm bg-white p-1 rounded-2 border">
+            <button class="status-btn btn {% if task.status == 'todo' %}btn-secondary{% else %}btn-link text-decoration-none text-muted{% endif %}" data-id="{{ task.id }}" data-status="todo">Todo</button>
+            <button class="status-btn btn {% if task.status == 'doing' %}btn-warning{% else %}btn-link text-decoration-none text-muted{% endif %}" data-id="{{ task.id }}" data-status="doing">Doing</button>
+            <button class="status-btn btn {% if task.status == 'done' %}btn-success{% else %}btn-link text-decoration-none text-muted{% endif %}" data-id="{{ task.id }}" data-status="done">Done</button>
+        </div>
     </div>
+</div>
 
     <!-- ⭐ AJAX Quick -->
     <button class="btn btn-primary btn-sm mb-2 quick-btn"
@@ -69,9 +56,10 @@
         <button class="btn btn-danger btn-sm">Delete</button>
     </form>
 
-    <div class="mb-3 mt-2">
+    <div class="mb-3 mt-4 text-end">
         {% if task.status == 'todo' %}
-            <button data-id="{{ task.id }}" class="btn btn-sm btn-outline-success add-subtask-btn"> 
+            <button type="button" class="btn btn-outline-success btn-sm shadow-sm fw-bold px-3" 
+                    data-bs-toggle="modal" data-bs-target="#addSubtaskModal">
                 + Add Subtask
             </button>
         {% else %}
@@ -80,43 +68,67 @@
                 + Add Subtask (Only for Todo tasks)
             </button>
         {% endif %}
-        
-        <div id="subtask-error" class="alert alert-danger mt-2" style="display: none;"></div>
     </div>
 
     <!-- Subtasks -->
-    <ul id="subtask-list" class="list-group mt-4">
+    <ul id="subtask-list" class="list-group mt-4 mb-5 shadow-sm">
         {% for sub in subtasks %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-            <a href="{% url 'task_detail' sub.id %}" class="fw-bold text-decoration-none">
+        <li class="list-group-item d-flex align-items-center py-3 hover-bg-light">
+            <input class="form-check-input me-3 toggle-subtask m-0" 
+                   type="checkbox" 
+                   data-id="{{ sub.id }}" 
+                   style="transform: scale(1.4); cursor: pointer;"
+                   {% if sub.status == 'done' %}checked{% endif %}>
+            
+            <a href="{% url 'task_detail' sub.id %}" 
+               class="fw-bold text-decoration-none text-dark flex-grow-1 {% if sub.status == 'done' %}text-decoration-line-through text-muted{% endif %}"
+               id="subtask-text-{{ sub.id }}">
                 {{ sub.title }}
             </a>
-            <button class="toggle-subtask btn btn-sm btn-outline-success"
-                    data-id="{{ sub.id }}">
-                {% if sub.status == 'done' %}✓{% else %}⬜{% endif %}
-            </button>
+        </li>
+        {% empty %}
+        <li class="list-group-item text-muted text-center py-4 bg-light">
+            No subtasks yet. Add one above!
         </li>
         {% endfor %}
     </ul>
 </div>
 
+
+    <!-- Editor UI -->
+<div class="mt-5 mb-5 shadow-sm rounded border p-0 bg-white">
+        <div class="bg-light px-4 py-3 border-bottom d-flex justify-content-between align-items-center rounded-top">
+            <h5 class="fw-bold m-0">📄 Task Notes</h5>
+            <span id="save-status" class="badge bg-success" style="display: none; font-size: 0.9rem;">Saved! ✓</span>
+        </div>
+        
+        <div id="editorjs" class="px-5 py-4" style="min-height: 350px; font-size: 1.1rem;"></div>
+        
+        <input type="hidden" id="existing-data" value="{{ task.description }}">
+        
+        <div class="p-3 bg-light border-top rounded-bottom text-end">
+            <button id="save-notes-btn" class="btn btn-dark px-4 fw-bold shadow-sm">Save Notes</button>
+        </div>
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/simple-image@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/table@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/warning@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/inline-code@latest"></script>
 <script>
 
 function getCSRFToken() {
     return document.querySelector('[name=csrfmiddlewaretoken]').value;
 }
 
-function toggleEdit() {
-    const display = document.getElementById('description-display');
-    const edit = document.getElementById('description-edit');
-    if (display.style.display === 'none') {
-        display.style.display = 'block';
-        edit.style.display = 'none';
-    } else {
-        display.style.display = 'none';
-        edit.style.display = 'block';
-    }
-}
+
 
 // ✅ Task Status AJAX
 document.querySelectorAll('.status-btn').forEach(btn => {
@@ -153,74 +165,139 @@ document.addEventListener("click", function(e) {
 });
 
 
-// ✅ Subtask AJAX
-document.addEventListener('click', function(e) {
-
+// ✅ Subtask AJAX (Updated for Checkboxes)
+document.addEventListener('change', function(e) {
     if (e.target.classList.contains('toggle-subtask')) {
+        const checkbox = e.target;
+        const textElement = document.getElementById(`subtask-text-${checkbox.dataset.id}`);
 
-        const btn = e.target;
-
-        fetch(`/subtask/${btn.dataset.id}/toggle/`, {
+        fetch(`/subtask/${checkbox.dataset.id}/toggle/`, {
             method: "POST",
             headers: {'X-CSRFToken': getCSRFToken()}
         })
         .then(res => res.json())
         .then(data => {
-
-            btn.innerText = data.status === "done" ? "✓" : "⬜";
+            // Instantly apply or remove the strikethrough effect based on database response
+            if (data.status === "done") {
+                checkbox.checked = true;
+                textElement.classList.add('text-decoration-line-through', 'text-muted');
+            } else {
+                checkbox.checked = false;
+                textElement.classList.remove('text-decoration-line-through', 'text-muted');
+            }
         });
-
     }
-
 });
 
-// Add Subtask Function
-function addSubtask(taskId) {
-    const title = prompt("Enter subtask title:");
-    if (!title) return;
-    
-    const errorDiv = document.getElementById('subtask-error');
-    if (errorDiv) {
-        errorDiv.style.display = 'none';
-        errorDiv.textContent = '';
+
+// ==========================================
+// 🚀 EDITOR.JS (NOTION CLONE) INITIALIZATION
+// ==========================================
+
+// 1. Safely load data (Ignore old plain text/HTML to prevent crashes)
+let editorData; // Leave undefined by default
+try {
+    const rawData = document.getElementById('existing-data').value;
+    // ONLY parse if it actually looks like a JSON object
+    if (rawData && rawData.trim().startsWith('{')) {
+        editorData = JSON.parse(rawData);
     }
-    
-    console.log("Adding subtask for task ID:", taskId);
-    console.log("Title:", title);
-    
-    fetch(`/task/${taskId}/add-subtask/`, {
-        method: "POST",
-        headers: {
-            'X-CSRFToken': getCSRFToken(),
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `title=${encodeURIComponent(title)}`
-    })
-    .then(response => {
-        console.log("Response status:", response.status);
-        return response.json().then(data => {
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to add subtask');
-            }
-            return data;
-        });
-    })
-    .then(data => {
-        console.log("Success:", data);
-        // Reload to show the new subtask
-        location.reload();
-    })
-    .catch(error => {
-        console.error("Error:", error);
-        if (errorDiv) {
-            errorDiv.textContent = error.message;
-            errorDiv.style.display = 'block';
-        } else {
-            alert(error.message);
-        }
-    });
+} catch (e) {
+    console.warn("Could not parse existing data, starting fresh.");
 }
 
+// 2. Initialize the Block Editor
+const editor = new EditorJS({
+    holder: 'editorjs',
+    placeholder: "Press '/' for commands, or start typing...",
+    data: editorData, // If this is undefined, Editor.js opens a clean slate safely
+    tools: {
+        header: Header,
+        list: EditorjsList,
+        checklist: Checklist,
+        code: CodeTool,
+        inlineCode: InlineCode,
+        marker: Marker,
+        table: {
+            class: Table,
+            inlineToolbar: true,
+            config: { rows: 2, cols: 3 },
+        },
+        warning: {
+            class: Warning,
+            inlineToolbar: true,
+            config: { titlePlaceholder: 'Title', messagePlaceholder: 'Message' },
+        },
+        delimiter: Delimiter,
+    }
+});
+
+// 3. The Advanced AJAX Save Function
+document.getElementById('save-notes-btn').addEventListener('click', function() {
+    const btn = document.getElementById('save-notes-btn');
+    const statusText = document.getElementById('save-status');
+    btn.innerText = "Saving...";
+
+    editor.save().then((outputData) => {
+        fetch(`/task/{{ task.id }}/update-description/`, {
+            method: "POST",
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `description=${encodeURIComponent(JSON.stringify(outputData))}`
+        })
+        .then(res => {
+            if (res.ok) {
+                btn.innerText = "Save Notes";
+                statusText.style.display = 'inline-block';
+                setTimeout(() => statusText.style.display = 'none', 2500);
+            }
+        });
+    }).catch((error) => {
+        console.error('Saving failed: ', error);
+        btn.innerText = "Error!";
+    });
+});
+
 </script>
+
+<style>
+    .ce-block__content, .ce-toolbar__content {
+        max-width: 900px; 
+    }
+    .codex-editor--empty .ce-block:first-child .ce-paragraph:before {
+        color: #adb5bd; 
+    }
+</style>
+
+
+<!-- Add Subtask Modal -->
+ <div class="modal fade" id="addSubtaskModal" tabindex="-1" aria-labelledby="addSubtaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-bottom-0">
+                <h5 class="modal-title fw-bold" id="addSubtaskModalLabel">New Subtask for: {{ task.title }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'add_subtask' task.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small text-uppercase fw-bold">Subtask Title</label>
+                        <input type="text" name="title" class="form-control form-control-lg" placeholder="E.g., Research API documentation" required autofocus>
+                    </div>
+                    <p class="text-muted small">
+                        <i class="bi bi-info-circle"></i> This will be nested under the current task.
+                    </p>
+                </div>
+                <div class="modal-footer border-top-0 bg-light rounded-bottom">
+                    <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4 shadow-sm">Add Subtask</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
