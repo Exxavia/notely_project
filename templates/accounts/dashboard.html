@@ -15,34 +15,36 @@ Dashboard
     </div>
 
     <!-- Summary -->
-    <div class="row text-center mb-4">
+    <div class="row text-center mb-5">
         <div class="col-md-4">
-            <div class="card shadow-sm p-3">
-                <h6>Total Tasks</h6>
-                <h3 id="total-count">0</h3>
+            <div class="card shadow-sm p-4 border-0 border-bottom border-primary" style="border-bottom-width: 4px !important;">
+                <h6 class="text-uppercase text-muted fw-bold letter-spacing-1 mb-2">Total Tasks</h6>
+                <h2 id="total-count" class="fw-bold mb-0">0</h2>
             </div>
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow-sm p-3">
-                <h6>Completed</h6>
-                <h3 id="done-count">0</h3>
+            <div class="card shadow-sm p-4 border-0 border-bottom border-success" style="border-bottom-width: 4px !important;">
+                <h6 class="text-uppercase text-muted fw-bold letter-spacing-1 mb-2">Completed</h6>
+                <h2 id="done-count" class="fw-bold text-success mb-0">0</h2>
             </div>
         </div>
 
         <div class="col-md-4">
-            <div class="card shadow-sm p-3">
-                <h6>Overdue</h6>
-                <h3 id="overdue-count">0</h3>
+            <div class="card shadow-sm p-4 border-0 border-bottom border-danger" style="border-bottom-width: 4px !important;">
+                <h6 class="text-uppercase text-muted fw-bold letter-spacing-1 mb-2">Overdue</h6>
+                <h2 id="overdue-count" class="fw-bold text-danger mb-0">0</h2>
             </div>
         </div>
     </div>
 
     <!-- Buttons -->
-    <div class="text-center mb-3">
-        <button class="btn btn-outline-primary chart-btn active" data-type="status">Status</button>
-        <button class="btn btn-outline-secondary chart-btn" data-type="priority">Priority</button>
-        <button class="btn btn-outline-danger chart-btn" data-type="overdue">Overdue</button>
+    <div class="d-flex justify-content-center mb-4">
+        <div class="btn-group shadow-sm" role="group">
+            <button class="btn btn-outline-dark chart-btn active px-4" data-type="status">Status</button>
+            <button class="btn btn-outline-dark chart-btn px-4" data-type="priority">Priority</button>
+            <button class="btn btn-outline-dark chart-btn px-4" data-type="overdue">Overdue</button>
+        </div>
     </div>
 
     <!-- Insight -->
@@ -56,8 +58,10 @@ Dashboard
     <div class="row mt-4">
         <div class="col-md-6">
             <div class="card shadow-sm p-4">
-                <div style="position: relative; height: 350px;">
-                    <canvas id="taskChart"></canvas>
+                <div style="overflow-x: auto; overflow-y: hidden; padding-bottom: 10px;">
+                    <div id="chartWrapper" style="position: relative; height: 350px; min-width: 100%;">
+                        <canvas id="taskChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -82,78 +86,131 @@ Dashboard
 
 let chart = null;
 
-/* Initialize chart */
-function initChart(labels, values) {
-
-    const ctx = document.getElementById("taskChart");
+/* Initialize Modern Stacked Bar Chart */
+function initChart(labels, todoData, doingData, doneData) {
+    const ctx = document.getElementById("taskChart").getContext("2d");
 
     chart = new Chart(ctx, {
-        type: "doughnut",
+        type: "bar",
         data: {
             labels: labels,
-            datasets: [{
-                data: values
-            }]
+            datasets: [
+                {
+                    label: "Done",
+                    data: doneData,
+                    backgroundColor: "#10b981", 
+                    borderRadius: 6,            
+                    borderSkipped: false,       
+                    barPercentage: 0.4          
+                },
+                {
+                    label: "Doing",
+                    data: doingData,
+                    backgroundColor: "#f59e0b", 
+                    borderRadius: 6,
+                    borderSkipped: false,
+                    barPercentage: 0.4
+                },
+                {
+                    label: "Todo",
+                    data: todoData,
+                    backgroundColor: "#ef4444", 
+                    borderRadius: 6,
+                    borderSkipped: false,
+                    barPercentage: 0.4
+                }
+            ]
         },
         options: {
-
-            /* 🔥 CHANGED: no redirect anymore */
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: { top: 20, bottom: 10 }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true, 
+                        padding: 20,
+                        font: { size: 13, weight: '500', family: "'Segoe UI', sans-serif" }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(17, 24, 39, 0.9)', 
+                    padding: 12,
+                    cornerRadius: 8,
+                    titleFont: { size: 14, family: "'Segoe UI', sans-serif" },
+                    bodyFont: { size: 13, family: "'Segoe UI', sans-serif" },
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.dataset.label}: ${context.raw}%`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { 
+                    stacked: true,
+                    grid: { 
+                        display: false, 
+                        drawBorder: false 
+                    },
+                    ticks: {
+                        color: '#6b7280', 
+                        font: { size: 12, family: "'Segoe UI', sans-serif" }
+                    }
+                },
+                y: { 
+                    stacked: true,
+                    max: 100,
+                    display: false 
+                }
+            },
             onClick: function(e, elements) {
-
                 if (!elements.length) return;
-
                 const index = elements[0].index;
-                const label = chart.data.labels[index].toLowerCase();
-
-                loadFilteredTasks(label);
+                const projectName = chart.data.labels[index];
+                loadFilteredTasks(projectName); 
             }
         }
     });
 }
 
 
-/* Load chart */
+/* Load chart and adjust scroll width */
 function loadChart(type) {
-
     fetch(`/chart/${type}/`)
     .then(res => res.json())
     .then(data => {
 
+        const wrapper = document.getElementById("chartWrapper");
+        if (data.labels.length > 5) {
+            wrapper.style.width = (data.labels.length * 80) + "px"; // 80px per project
+        } else {
+            wrapper.style.width = "100%";
+        }
+
         if (chart) {
             chart.data.labels = data.labels;
-            chart.data.datasets[0].data = data.values;
+            chart.data.datasets[0].data = data.done_values;
+            chart.data.datasets[1].data = data.doing_values;
+            chart.data.datasets[2].data = data.todo_values;
             chart.update();
         } else {
-            initChart(data.labels, data.values);
+            initChart(data.labels, data.todo_values, data.doing_values, data.done_values);
         }
 
-        const total = data.values.reduce((a, b) => a + b, 0);
-        document.getElementById("total-count").innerText = total;
-
-        if (type === "status") {
-
-            document.getElementById("done-count").innerText = data.values[2] || 0;
-
-            const percent = total ? Math.round((data.values[2] / total) * 100) : 0;
-
-            document.getElementById("insight-text").innerText =
-                `You have completed ${percent}% of your tasks`;
+        document.getElementById("total-count").innerText = data.total_tasks || 0;
+        document.getElementById("done-count").innerText = data.total_done || 0;
+        document.getElementById("overdue-count").innerText = data.total_overdue || 0;
+        
+        if (data.total_tasks > 0) {
+            const percent = Math.round((data.total_done / data.total_tasks) * 100);
+            document.getElementById("insight-text").innerText = `You have completed ${percent}% of all tasks`;
+        } else {
+            document.getElementById("insight-text").innerText = "No tasks available.";
         }
-
-        if (type === "overdue") {
-
-            document.getElementById("overdue-count").innerText = data.values[0] || 0;
-
-            document.getElementById("insight-text").innerText =
-                `${data.values[0]} tasks are overdue`;
-        }
-
-        if (type === "priority") {
-
-            document.getElementById("insight-text").innerText =
-                "Task distribution by priority";
-        }
-
     });
 }
 
@@ -219,15 +276,17 @@ function getColor(status) {
 
 /* Button switch */
 document.querySelectorAll('.chart-btn').forEach(btn => {
-
     btn.addEventListener('click', function() {
-
-        document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove("active"));
-        this.classList.add("active");
+        document.querySelectorAll('.chart-btn').forEach(b => {
+            b.classList.remove("active", "btn-dark");
+            b.classList.add("btn-outline-dark");
+        });
+        
+        this.classList.remove("btn-outline-dark");
+        this.classList.add("active", "btn-dark");
 
         loadChart(this.dataset.type);
     });
-
 });
 
 

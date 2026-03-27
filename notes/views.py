@@ -328,42 +328,91 @@ def task_stats(request):
 # ---------------- CHART DATA (TOP LEVEL DASHBOARD) ----------------
 @login_required
 def chart_data(request, type):
-
+    # 1. Grab all tasks and projects for the user
     tasks = Task.objects.filter(project__owner=request.user)
+    projects = Project.objects.filter(owner=request.user).order_by('id')
+
+    # 2. Calculate the global totals for the top summary cards
+    total_tasks = tasks.count()
+    total_done = tasks.filter(status="done").count()
+    total_overdue = tasks.filter(
+        due_date__lt=timezone.now().date(),
+        status__in=["todo", "doing"]
+    ).count()
+
+    # 3. Setup the lists we will send to the Stacked Bar Chart
+    labels = []
+    todo_values = []   # This will be the RED bar
+    doing_values = []  # This will be the YELLOW bar
+    done_values = []   # This will be the GREEN bar
 
     if type == "status":
-        data = {
-            "labels": ["Todo", "Doing", "Done"],
-            "values": [
-                tasks.filter(status="todo").count(),
-                tasks.filter(status="doing").count(),
-                tasks.filter(status="done").count(),
-            ]
-        }
+        for p in projects:
+            p_tasks = tasks.filter(project=p)
+            p_total = p_tasks.count()
+            
+            labels.append(p.title)
+            if p_total > 0:
+                t_todo = p_tasks.filter(status="todo").count()
+                t_doing = p_tasks.filter(status="doing").count()
+                t_done = p_tasks.filter(status="done").count()
+
+                # Calculate percentages per project
+                todo_values.append(round((t_todo / p_total) * 100))
+                doing_values.append(round((t_doing / p_total) * 100))
+                done_values.append(round((t_done / p_total) * 100))
+            else:
+                todo_values.append(0)
+                doing_values.append(0)
+                done_values.append(0)
 
     elif type == "priority":
-        data = {
-            "labels": ["Low", "Medium", "High"],
-            "values": [
-                tasks.filter(priority="low").count(),
-                tasks.filter(priority="medium").count(),
-                tasks.filter(priority="high").count(),
-            ]
-        }
+        for p in projects:
+            p_tasks = tasks.filter(project=p)
+            p_total = p_tasks.count()
+            
+            labels.append(p.title)
+            if p_total > 0:
+                t_high = p_tasks.filter(priority="high").count()
+                t_med = p_tasks.filter(priority="medium").count()
+                t_low = p_tasks.filter(priority="low").count()
+
+                todo_values.append(round((t_high / p_total) * 100)) # High -> Red
+                doing_values.append(round((t_med / p_total) * 100)) # Med -> Yellow
+                done_values.append(round((t_low / p_total) * 100))  # Low -> Green
+            else:
+                todo_values.append(0)
+                doing_values.append(0)
+                done_values.append(0)
 
     elif type == "overdue":
-        overdue = tasks.filter(
-            due_date__lt=timezone.now().date(),
-            status__in=["todo", "doing"]
-        ).count()
+        for p in projects:
+            p_tasks = tasks.filter(project=p)
+            p_total = p_tasks.count()
+            
+            labels.append(p.title)
+            if p_total > 0:
+                t_overdue = p_tasks.filter(due_date__lt=timezone.now().date(), status__in=["todo", "doing"]).count()
+                t_ontime = p_total - t_overdue
 
-        data = {
-            "labels": ["Overdue", "On Time"],
-            "values": [overdue, tasks.count() - overdue]
-        }
+                todo_values.append(round((t_overdue / p_total) * 100)) # Overdue -> Red
+                doing_values.append(0) # Empty Yellow for this view
+                done_values.append(round((t_ontime / p_total) * 100)) # On Time -> Green
+            else:
+                todo_values.append(0)
+                doing_values.append(0)
+                done_values.append(0)
 
-    else:
-        data = {"labels": [], "values": []}
+    # 4. Package everything up for JavaScript
+    data = {
+        "labels": labels,
+        "todo_values": todo_values,
+        "doing_values": doing_values,
+        "done_values": done_values,
+        "total_tasks": total_tasks,
+        "total_done": total_done,
+        "total_overdue": total_overdue
+    }
 
     return JsonResponse(data)
 
